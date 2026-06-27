@@ -1,7 +1,5 @@
 package com.example.whitefox.orders.enums;
 
-
-
 public enum OrderStatus {
     CREATED,
     PICKUP_ASSIGNED,
@@ -13,10 +11,15 @@ public enum OrderStatus {
     WASHING,
     IRONING,
     PACKING,
+
+    RECEIVED_AT_STORE_AFTER_PROCESSING,
     READY_FOR_CUSTOMER_PICKUP,
     READY_FOR_DELIVERY,
+
+    ASSIGNED_FOR_DELIVERY,
     OUT_FOR_DELIVERY,
-    RECEIVED_AT_STORE_AFTER_PROCESSING,
     DELIVERED,
+    DELIVERY_FAILED,
+
     CANCELLED
 }

@@ -2,6 +2,7 @@ package com.example.whitefox.pickupbill.entity;
 
 
 
+import com.example.whitefox.customerbooking.entity.CustomerBooking;
 import com.example.whitefox.customers.entity.Customer;
 import com.example.whitefox.riders.entity.Rider;
 import com.example.whitefox.store.entity.Store;
@@ -22,6 +23,10 @@ import java.util.UUID;
 @Builder
 public class PickupBill {
 
+
+    @ManyToOne
+    @JoinColumn(name = "customer_booking_id")
+    private CustomerBooking customerBooking;
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -40,6 +45,32 @@ public class PickupBill {
     @ManyToOne
     @JoinColumn(name = "store_id")
     private Store store;
+
+    @ManyToOne
+    @JoinColumn(name = "assigned_store_id")
+    private Store assignedStore;
+
+    @ManyToOne
+    @JoinColumn(name = "verification_store_id")
+    private Store verificationStore;
+
+    @ManyToOne
+    @JoinColumn(name = "drop_store_id")
+    private Store dropStore;
+
+    private Double pickupLatitude;
+
+    private Double pickupLongitude;
+
+    private Double dropLatitude;
+
+    private Double dropLongitude;
+
+    private LocalDateTime verifiedAt;
+
+    private LocalDateTime droppedAt;
+
+    private LocalDateTime receivedAt;
 
     private Double subtotal;
 

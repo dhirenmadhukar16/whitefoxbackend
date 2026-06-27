@@ -20,4 +20,16 @@ public interface PickupBillService {
     PickupBillResponse verifyPickupBill(UUID id);
 
     OrderResponse convertToOrder(UUID pickupBillId);
+    PickupBillResponse submitForVerification(UUID pickupBillId);
+
+    PickupBillResponse collectClothes(UUID pickupBillId);
+
+    PickupBillResponse dropAtStore(
+            UUID pickupBillId,
+            UUID dropStoreId,
+            Double dropLatitude,
+            Double dropLongitude
+    );
+
+    PickupBillResponse receiveByStore(UUID pickupBillId);
 }

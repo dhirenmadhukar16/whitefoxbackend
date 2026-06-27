@@ -103,4 +103,17 @@ public class RiderServiceImpl implements RiderService {
                 .active(rider.getActive())
                 .build();
     }
+    @Override
+    public RiderResponse updateLocation(UUID riderId, UpdateRiderLocationRequest request) {
+        Rider rider = riderRepository.findById(riderId)
+                .orElseThrow(() -> new RuntimeException("Rider not found"));
+
+        rider.setLatitude(request.getLatitude());
+        rider.setLongitude(request.getLongitude());
+        rider.setSpeed(request.getSpeed());
+        rider.setHeading(request.getHeading());
+        rider.setLastSeen(java.time.LocalDateTime.now());
+
+        return map(riderRepository.save(rider));
+    }
 }

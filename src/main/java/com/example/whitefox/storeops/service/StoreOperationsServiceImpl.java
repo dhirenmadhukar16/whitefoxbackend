@@ -1,7 +1,8 @@
 package com.example.whitefox.storeops.service;
 
-
-
+import com.example.whitefox.customerupdates.dto.CreateCustomerUpdateRequest;
+import com.example.whitefox.customerupdates.enums.CustomerUpdateType;
+import com.example.whitefox.customerupdates.service.CustomerUpdateService;
 import com.example.whitefox.orders.entity.LaundryOrder;
 import com.example.whitefox.orders.enums.OrderStatus;
 import com.example.whitefox.orders.repository.LaundryOrderRepository;
@@ -33,6 +34,7 @@ public class StoreOperationsServiceImpl implements StoreOperationsService {
     private final PickupBillItemRepository pickupBillItemRepository;
     private final GarmentRepository garmentRepository;
     private final StoreEmployeeRepository employeeRepository;
+    private final CustomerUpdateService customerUpdateService;
 
     @Override
     public StoreDashboardResponse getDashboard(UUID storeId) {
@@ -121,28 +123,68 @@ public class StoreOperationsServiceImpl implements StoreOperationsService {
     public StoreOrderSummaryResponse markReceivedFromHq(UUID orderId) {
         LaundryOrder order = getOrder(orderId);
         order.setStatus(OrderStatus.RECEIVED_AT_STORE_AFTER_PROCESSING);
-        return mapOrder(orderRepository.save(order));
+
+        LaundryOrder saved = orderRepository.save(order);
+
+        createOrderUpdate(
+                saved,
+                CustomerUpdateType.RECEIVED_AT_STORE,
+                "Received At Store",
+                "Your clothes have been received back at the store."
+        );
+
+        return mapOrder(saved);
     }
 
     @Override
     public StoreOrderSummaryResponse markReadyForCustomerPickup(UUID orderId) {
         LaundryOrder order = getOrder(orderId);
         order.setStatus(OrderStatus.READY_FOR_CUSTOMER_PICKUP);
-        return mapOrder(orderRepository.save(order));
+
+        LaundryOrder saved = orderRepository.save(order);
+
+        createOrderUpdate(
+                saved,
+                CustomerUpdateType.READY_FOR_PICKUP,
+                "Ready For Pickup",
+                "Your clothes are ready for pickup or delivery."
+        );
+
+        return mapOrder(saved);
     }
 
     @Override
     public StoreOrderSummaryResponse markOutForDelivery(UUID orderId) {
         LaundryOrder order = getOrder(orderId);
         order.setStatus(OrderStatus.OUT_FOR_DELIVERY);
-        return mapOrder(orderRepository.save(order));
+
+        LaundryOrder saved = orderRepository.save(order);
+
+        createOrderUpdate(
+                saved,
+                CustomerUpdateType.OUT_FOR_DELIVERY,
+                "Out For Delivery",
+                "Your clothes are out for delivery."
+        );
+
+        return mapOrder(saved);
     }
 
     @Override
     public StoreOrderSummaryResponse markDelivered(UUID orderId) {
         LaundryOrder order = getOrder(orderId);
         order.setStatus(OrderStatus.DELIVERED);
-        return mapOrder(orderRepository.save(order));
+
+        LaundryOrder saved = orderRepository.save(order);
+
+        createOrderUpdate(
+                saved,
+                CustomerUpdateType.DELIVERED,
+                "Delivered",
+                "Your order has been delivered successfully."
+        );
+
+        return mapOrder(saved);
     }
 
     private Store getStore(UUID storeId) {
@@ -153,6 +195,23 @@ public class StoreOperationsServiceImpl implements StoreOperationsService {
     private LaundryOrder getOrder(UUID orderId) {
         return orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
+    }
+
+    private void createOrderUpdate(
+            LaundryOrder order,
+            CustomerUpdateType type,
+            String title,
+            String description
+    ) {
+        CreateCustomerUpdateRequest request = new CreateCustomerUpdateRequest();
+
+        request.setCustomerId(order.getCustomer().getId());
+        request.setOrderId(order.getId());
+        request.setUpdateType(type);
+        request.setTitle(title);
+        request.setDescription(description);
+
+        customerUpdateService.createUpdate(request);
     }
 
     private StoreOrderSummaryResponse mapOrder(LaundryOrder order) {

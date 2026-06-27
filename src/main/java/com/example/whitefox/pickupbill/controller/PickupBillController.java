@@ -1,9 +1,8 @@
 package com.example.whitefox.pickupbill.controller;
 
-
-
 import com.example.whitefox.orders.dto.OrderResponse;
 import com.example.whitefox.pickupbill.dto.CreatePickupBillRequest;
+import com.example.whitefox.pickupbill.dto.DropAtStoreRequest;
 import com.example.whitefox.pickupbill.dto.PickupBillResponse;
 import com.example.whitefox.pickupbill.service.PickupBillService;
 import lombok.RequiredArgsConstructor;
@@ -38,11 +37,45 @@ public class PickupBillController {
         return pickupBillService.getPickupBillById(id);
     }
 
+    @PatchMapping("/{id}/submit")
+    public PickupBillResponse submitForVerification(
+            @PathVariable UUID id
+    ) {
+        return pickupBillService.submitForVerification(id);
+    }
+
     @PatchMapping("/{id}/verify")
     public PickupBillResponse verifyPickupBill(
             @PathVariable UUID id
     ) {
         return pickupBillService.verifyPickupBill(id);
+    }
+
+    @PatchMapping("/{id}/collect-clothes")
+    public PickupBillResponse collectClothes(
+            @PathVariable UUID id
+    ) {
+        return pickupBillService.collectClothes(id);
+    }
+
+    @PatchMapping("/{id}/drop-store")
+    public PickupBillResponse dropAtStore(
+            @PathVariable UUID id,
+            @RequestBody DropAtStoreRequest request
+    ) {
+        return pickupBillService.dropAtStore(
+                id,
+                request.getDropStoreId(),
+                request.getDropLatitude(),
+                request.getDropLongitude()
+        );
+    }
+
+    @PatchMapping("/{id}/receive-clothes")
+    public PickupBillResponse receiveClothes(
+            @PathVariable UUID id
+    ) {
+        return pickupBillService.receiveByStore(id);
     }
 
     @PostMapping("/{id}/convert-to-order")
@@ -51,4 +84,5 @@ public class PickupBillController {
     ) {
         return pickupBillService.convertToOrder(id);
     }
+
 }

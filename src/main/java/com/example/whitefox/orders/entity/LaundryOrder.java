@@ -5,6 +5,7 @@ package com.example.whitefox.orders.entity;
 import com.example.whitefox.customers.entity.Customer;
 import com.example.whitefox.orders.enums.OrderStatus;
 import com.example.whitefox.orders.enums.PaymentStatus;
+import com.example.whitefox.riders.entity.Rider;
 import com.example.whitefox.store.entity.Store;
 import jakarta.persistence.*;
 import lombok.*;
@@ -12,6 +13,7 @@ import lombok.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import com.example.whitefox.riders.entity.Rider;
 
 @Entity
 @Table(name = "laundry_orders")
@@ -56,6 +58,9 @@ public class LaundryOrder {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+    @ManyToOne
+    @JoinColumn(name = "delivery_rider_id")
+    private Rider deliveryRider;
 
     @PrePersist
     public void prePersist() {

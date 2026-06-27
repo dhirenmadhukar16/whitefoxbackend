@@ -26,4 +26,7 @@ public class StoreResponse {
     private String city;
 
     private Boolean active;
+    private Double latitude;
+
+    private Double longitude;
 }

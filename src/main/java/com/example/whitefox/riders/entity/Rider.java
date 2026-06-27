@@ -59,4 +59,9 @@ public class Rider {
     public void preUpdate() {
         updatedAt = LocalDateTime.now();
     }
+    private LocalDateTime lastSeen;
+
+    private Double speed;
+
+    private Double heading;
 }

@@ -68,4 +68,28 @@ public class GarmentTrackingController {
     ) {
         return garmentTrackingService.scanQr(qrCode);
     }
+    @PatchMapping("/orders/{orderId}/send-to-hq")
+    public List<GarmentResponse> sendOrderGarmentsToHq(
+            @PathVariable UUID orderId
+    ) {
+        return garmentTrackingService.sendOrderGarmentsToHq(orderId);
+    }
+    @PatchMapping("/orders/{orderId}/receive-at-hq")
+    public List<GarmentResponse> receiveOrderGarmentsAtHq(
+            @PathVariable UUID orderId
+    ) {
+        return garmentTrackingService.receiveOrderGarmentsAtHq(orderId);
+    }
+    @PatchMapping("/orders/{orderId}/send-back-to-store")
+    public List<GarmentResponse> sendOrderGarmentsBackToStore(
+            @PathVariable UUID orderId
+    ) {
+        return garmentTrackingService.sendOrderGarmentsBackToStore(orderId);
+    }
+    @PatchMapping("/orders/{orderId}/receive-back-at-store")
+    public List<GarmentResponse> receiveOrderGarmentsBackAtStore(
+            @PathVariable UUID orderId
+    ) {
+        return garmentTrackingService.receiveOrderGarmentsBackAtStore(orderId);
+    }
 }

@@ -53,4 +53,11 @@ public class RiderController {
         riderService.deactivateRider(id);
         return ResponseEntity.noContent().build();
     }
+    @PatchMapping("/riders/{riderId}/location")
+    public RiderResponse updateLocation(
+            @PathVariable UUID riderId,
+            @RequestBody UpdateRiderLocationRequest request
+    ) {
+        return riderService.updateLocation(riderId, request);
+    }
 }

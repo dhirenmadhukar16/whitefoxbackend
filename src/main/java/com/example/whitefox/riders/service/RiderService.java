@@ -24,4 +24,5 @@ public interface RiderService {
     RiderResponse updateStatus(UUID id, UpdateRiderStatusRequest request);
 
     void deactivateRider(UUID id);
+    RiderResponse updateLocation(UUID riderId, UpdateRiderLocationRequest request);
 }

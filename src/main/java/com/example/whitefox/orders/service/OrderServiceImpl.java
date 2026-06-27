@@ -19,7 +19,10 @@ import com.example.whitefox.store.repository.StoreRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.example.whitefox.orders.enums.OrderStatus;
+import com.example.whitefox.pickupbill.entity.PickupBill;
+import com.example.whitefox.pickupbill.entity.PickupBillItem;
+import com.example.whitefox.pickupbill.repository.PickupBillItemRepository;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,6 +35,7 @@ public class OrderServiceImpl implements OrderService {
     private final CustomerRepository customerRepository;
     private final StoreRepository storeRepository;
     private final ServiceCatalogRepository serviceCatalogRepository;
+    private final PickupBillItemRepository pickupBillItemRepository;
 
     @Override
     @Transactional
@@ -105,7 +109,45 @@ public class OrderServiceImpl implements OrderService {
 
         return map(savedOrder);
     }
+    @Override
+    @Transactional
+    public OrderResponse createOrderFromPickupBill(PickupBill pickupBill) {
 
+        Store finalStore = pickupBill.getStore();
+
+        LaundryOrder order = LaundryOrder.builder()
+                .customer(pickupBill.getCustomer())
+                .store(finalStore)
+                .orderNumber(generateOrderNumber())
+                .pickupDate(java.time.LocalDate.now())
+                .deliveryDate(java.time.LocalDate.now().plusDays(2))
+                .status(OrderStatus.RECEIVED_AT_STORE)
+                .subtotal(pickupBill.getSubtotal())
+                .gst(pickupBill.getGst())
+                .totalAmount(pickupBill.getTotalAmount())
+                .build();
+
+        LaundryOrder savedOrder = orderRepository.save(order);
+
+        List<PickupBillItem> pickupItems =
+                pickupBillItemRepository.findByPickupBillId(pickupBill.getId());
+
+        for (PickupBillItem pickupItem : pickupItems) {
+
+            OrderItem orderItem = OrderItem.builder()
+                    .order(savedOrder)
+                    .serviceType(pickupItem.getServiceType())
+                    .itemName(pickupItem.getItemName())
+                    .quantity(pickupItem.getQuantity())
+                    .unitPrice(pickupItem.getUnitPrice())
+                    .totalPrice(pickupItem.getTotalPrice())
+                    .build();
+
+            orderItemRepository.save(orderItem);
+        }
+
+        return map(savedOrder);
+    }
     @Override
     public OrderResponse getOrder(UUID orderId) {
 

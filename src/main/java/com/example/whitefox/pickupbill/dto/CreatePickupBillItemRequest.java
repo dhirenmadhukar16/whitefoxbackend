@@ -19,3 +19,5 @@ public class CreatePickupBillItemRequest {
 
     private String photoUrl;
 }
+
+

@@ -191,4 +191,113 @@ public class GarmentTrackingServiceImpl implements GarmentTrackingService {
                 .history(history)
                 .build();
     }
+    @Override
+    public List<GarmentResponse> sendOrderGarmentsToHq(UUID orderId) {
+
+        List<Garment> garments = garmentRepository.findByOrderId(orderId);
+
+        if (garments.isEmpty()) {
+            throw new RuntimeException("No garments found for this order");
+        }
+
+        List<GarmentResponse> responses = new ArrayList<>();
+
+        for (Garment garment : garments) {
+
+            garment.setStatus(GarmentStatus.SENT_TO_HQ);
+
+            Garment saved = garmentRepository.save(garment);
+
+            saveHistory(
+                    saved,
+                    GarmentStatus.SENT_TO_HQ,
+                    "Garment sent from store to HQ"
+            );
+
+            responses.add(map(saved));
+        }
+
+        return responses;
+    }
+    @Override
+    public List<GarmentResponse> receiveOrderGarmentsAtHq(UUID orderId) {
+
+        List<Garment> garments = garmentRepository.findByOrderId(orderId);
+
+        if (garments.isEmpty()) {
+            throw new RuntimeException("No garments found for this order");
+        }
+
+        List<GarmentResponse> responses = new ArrayList<>();
+
+        for (Garment garment : garments) {
+            garment.setStatus(GarmentStatus.RECEIVED_AT_HQ);
+
+            Garment saved = garmentRepository.save(garment);
+
+            saveHistory(
+                    saved,
+                    GarmentStatus.RECEIVED_AT_HQ,
+                    "Garment received at HQ"
+            );
+
+            responses.add(map(saved));
+        }
+
+        return responses;
+    }
+    @Override
+    public List<GarmentResponse> sendOrderGarmentsBackToStore(UUID orderId) {
+
+        List<Garment> garments = garmentRepository.findByOrderId(orderId);
+
+        if (garments.isEmpty()) {
+            throw new RuntimeException("No garments found for this order");
+        }
+
+        List<GarmentResponse> responses = new ArrayList<>();
+
+        for (Garment garment : garments) {
+            garment.setStatus(GarmentStatus.SENT_TO_STORE);
+
+            Garment saved = garmentRepository.save(garment);
+
+            saveHistory(
+                    saved,
+                    GarmentStatus.SENT_TO_STORE,
+                    "Garment dispatched from HQ back to store"
+            );
+
+            responses.add(map(saved));
+        }
+
+        return responses;
+    }
+    @Override
+    public List<GarmentResponse> receiveOrderGarmentsBackAtStore(UUID orderId) {
+
+        List<Garment> garments = garmentRepository.findByOrderId(orderId);
+
+        if (garments.isEmpty()) {
+            throw new RuntimeException("No garments found for this order");
+        }
+
+        List<GarmentResponse> responses = new ArrayList<>();
+
+        for (Garment garment : garments) {
+            garment.setStatus(GarmentStatus.RECEIVED_AT_STORE_AFTER_PROCESSING);
+
+            Garment saved = garmentRepository.save(garment);
+
+            saveHistory(
+                    saved,
+                    GarmentStatus.RECEIVED_AT_STORE_AFTER_PROCESSING,
+                    "Garment received back at store after HQ processing"
+            );
+
+            responses.add(map(saved));
+        }
+
+        return responses;
+    }
 }

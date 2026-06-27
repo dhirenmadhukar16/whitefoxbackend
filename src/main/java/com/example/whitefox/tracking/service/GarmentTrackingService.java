@@ -32,4 +32,8 @@ public interface GarmentTrackingService {
     GarmentResponse scanQr(
             String qrCode
     );
+    List<GarmentResponse> sendOrderGarmentsToHq(UUID orderId);
+    List<GarmentResponse> receiveOrderGarmentsAtHq(UUID orderId);
+    List<GarmentResponse> sendOrderGarmentsBackToStore(UUID orderId);
+    List<GarmentResponse> receiveOrderGarmentsBackAtStore(UUID orderId);
 }

@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class WhitefoxApplication {
 
 	public static void main(String[] args) {
+
 		SpringApplication.run(WhitefoxApplication.class, args);
 	}
 
