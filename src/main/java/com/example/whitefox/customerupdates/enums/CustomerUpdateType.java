@@ -1,0 +1,48 @@
+package com.example.whitefox.customerupdates.enums;
+
+
+
+public enum CustomerUpdateType {
+
+    BOOKING_CREATED,
+
+    STORE_ASSIGNED,
+
+    RIDER_ASSIGNED,
+
+    RIDER_ON_THE_WAY,
+
+    RIDER_REACHED,
+
+    PICKUP_BILL_CREATED,
+
+    PICKUP_VERIFIED,
+
+    ORDER_CREATED,
+
+    CLOTHES_RECEIVED_AT_STORE,
+
+    SENT_TO_HQ,
+
+    RECEIVED_AT_HQ,
+
+    WASHING_STARTED,
+
+    IRONING,
+
+    PACKING,
+
+    SENT_TO_STORE,
+
+    RECEIVED_AT_STORE,
+
+    READY_FOR_PICKUP,
+
+    OUT_FOR_DELIVERY,
+
+    DELIVERED,
+
+    PAYMENT_RECEIVED,
+
+    CANCELLED
+}
