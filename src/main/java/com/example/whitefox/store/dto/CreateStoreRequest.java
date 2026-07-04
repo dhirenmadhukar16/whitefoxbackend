@@ -23,4 +23,6 @@ public class CreateStoreRequest {
     private Double latitude;
 
     private Double longitude;
+
+    private String password;
 }

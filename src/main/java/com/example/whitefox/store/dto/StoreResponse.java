@@ -29,4 +29,6 @@ public class StoreResponse {
     private Double latitude;
 
     private Double longitude;
+
+    private String generatedPassword;
 }

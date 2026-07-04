@@ -24,6 +24,12 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.UUID;
 
+import com.example.whitefox.store.entity.StoreServicePricing;
+import com.example.whitefox.store.repository.StoreServicePricingRepository;
+import com.example.whitefox.garments.entity.ServiceCatalog;
+import com.example.whitefox.garments.repository.ServiceCatalogRepository;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class StoreOperationsServiceImpl implements StoreOperationsService {
@@ -35,6 +41,8 @@ public class StoreOperationsServiceImpl implements StoreOperationsService {
     private final GarmentRepository garmentRepository;
     private final StoreEmployeeRepository employeeRepository;
     private final CustomerUpdateService customerUpdateService;
+    private final StoreServicePricingRepository pricingRepository;
+    private final ServiceCatalogRepository serviceCatalogRepository;
 
     @Override
     public StoreDashboardResponse getDashboard(UUID storeId) {
@@ -255,6 +263,58 @@ public class StoreOperationsServiceImpl implements StoreOperationsService {
                 .totalAmount(bill.getTotalAmount())
                 .status(bill.getStatus())
                 .items(List.of())
+                .build();
+    }
+
+    @Override
+    public List<StoreServicePricingDto> getStorePricing(UUID storeId) {
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new RuntimeException("Store not found"));
+
+        List<ServiceCatalog> allServices = serviceCatalogRepository.findAll();
+        List<StoreServicePricing> customPrices = pricingRepository.findByStoreId(storeId);
+
+        return allServices.stream().map(service -> {
+            StoreServicePricing custom = customPrices.stream()
+                    .filter(cp -> cp.getServiceCatalog().getId().equals(service.getId()))
+                    .findFirst()
+                    .orElse(null);
+
+            return StoreServicePricingDto.builder()
+                    .serviceId(service.getId())
+                    .serviceType(service.getServiceType())
+                    .itemName(service.getItemName())
+                    .globalPrice(service.getPrice())
+                    .storeCustomPrice(custom != null ? custom.getCustomPrice() : null)
+                    .isOverridden(custom != null)
+                    .build();
+        }).collect(Collectors.toList());
+    }
+
+    @Override
+    public StoreServicePricingDto setStorePricing(UUID storeId, SetStorePricingRequest request) {
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new RuntimeException("Store not found"));
+
+        ServiceCatalog service = serviceCatalogRepository.findById(request.getServiceId())
+                .orElseThrow(() -> new RuntimeException("Service not found"));
+
+        StoreServicePricing pricing = pricingRepository.findByStoreIdAndServiceCatalogId(storeId, service.getId())
+                .orElse(StoreServicePricing.builder()
+                        .store(store)
+                        .serviceCatalog(service)
+                        .build());
+
+        pricing.setCustomPrice(request.getCustomPrice());
+        pricingRepository.save(pricing);
+
+        return StoreServicePricingDto.builder()
+                .serviceId(service.getId())
+                .serviceType(service.getServiceType())
+                .itemName(service.getItemName())
+                .globalPrice(service.getPrice())
+                .storeCustomPrice(pricing.getCustomPrice())
+                .isOverridden(true)
                 .build();
     }
 }

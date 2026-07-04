@@ -24,4 +24,8 @@ public interface StoreOperationsService {
     StoreOrderSummaryResponse markOutForDelivery(UUID orderId);
 
     StoreOrderSummaryResponse markDelivered(UUID orderId);
+
+    List<StoreServicePricingDto> getStorePricing(UUID storeId);
+
+    StoreServicePricingDto setStorePricing(UUID storeId, SetStorePricingRequest request);
 }

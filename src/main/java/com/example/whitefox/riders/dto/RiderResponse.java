@@ -22,4 +22,5 @@ public class RiderResponse {
     private Double longitude;
     private RiderStatus status;
     private Boolean active;
+    private String generatedPassword;
 }

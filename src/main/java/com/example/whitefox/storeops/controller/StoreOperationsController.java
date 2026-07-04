@@ -71,4 +71,19 @@ public class StoreOperationsController {
     ) {
         return storeOperationsService.markDelivered(orderId);
     }
+
+    @GetMapping("/stores/{storeId}/pricing")
+    public List<StoreServicePricingDto> getStorePricing(
+            @PathVariable UUID storeId
+    ) {
+        return storeOperationsService.getStorePricing(storeId);
+    }
+
+    @PostMapping("/stores/{storeId}/pricing")
+    public StoreServicePricingDto setStorePricing(
+            @PathVariable UUID storeId,
+            @RequestBody SetStorePricingRequest request
+    ) {
+        return storeOperationsService.setStorePricing(storeId, request);
+    }
 }

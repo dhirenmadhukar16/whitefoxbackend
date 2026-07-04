@@ -8,6 +8,12 @@ import com.example.whitefox.riders.repository.RiderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import com.example.whitefox.auth.entity.User;
+import com.example.whitefox.auth.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import java.security.SecureRandom;
+import java.util.Base64;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -16,9 +22,40 @@ import java.util.UUID;
 public class RiderServiceImpl implements RiderService {
 
     private final RiderRepository riderRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    private String generateRandomPassword() {
+        SecureRandom random = new SecureRandom();
+        byte[] bytes = new byte[6];
+        random.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes); // Creates an 8-char string
+    }
 
     @Override
     public RiderResponse createRider(CreateRiderRequest request) {
+
+        String plainPassword = request.getPassword();
+        if (plainPassword == null || plainPassword.trim().isEmpty()) {
+            plainPassword = generateRandomPassword();
+        }
+
+        // Check if user already exists
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new RuntimeException("Email already exists");
+        }
+
+        User user = User.builder()
+                .firstName(request.getName())
+                .lastName("Rider")
+                .email(request.getEmail())
+                .phone(request.getPhone())
+                .password(passwordEncoder.encode(plainPassword))
+                .role("RIDER")
+                .active(true)
+                .build();
+
+        userRepository.save(user);
 
         Rider rider = Rider.builder()
                 .name(request.getName())
@@ -31,7 +68,9 @@ public class RiderServiceImpl implements RiderService {
 
         Rider saved = riderRepository.save(rider);
 
-        return map(saved);
+        RiderResponse response = map(saved);
+        response.setGeneratedPassword(plainPassword);
+        return response;
     }
 
     @Override

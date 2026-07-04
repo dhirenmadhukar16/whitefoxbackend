@@ -11,4 +11,5 @@ public class CreateRiderRequest {
     private String vehicleNumber;
     private Double latitude;
     private Double longitude;
+    private String password;
 }

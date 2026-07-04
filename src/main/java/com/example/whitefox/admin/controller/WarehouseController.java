@@ -26,6 +26,11 @@ public class WarehouseController {
         return ResponseEntity.ok(inventoryRepository.findAll());
     }
 
+    @PostMapping("/inventory")
+    public ResponseEntity<WarehouseInventory> addInventory(@RequestBody WarehouseInventory item) {
+        return ResponseEntity.ok(inventoryRepository.save(item));
+    }
+
     @GetMapping("/purchase-orders")
     public ResponseEntity<List<PurchaseOrder>> getPurchaseOrders() {
         return ResponseEntity.ok(poRepository.findAll());

@@ -10,6 +10,12 @@ import com.example.whitefox.store.service.StoreService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import com.example.whitefox.auth.entity.User;
+import com.example.whitefox.auth.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import java.security.SecureRandom;
+import java.util.Base64;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -18,9 +24,40 @@ import java.util.UUID;
 public class StoreServiceImpl implements StoreService {
 
     private final StoreRepository storeRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    private String generateRandomPassword() {
+        SecureRandom random = new SecureRandom();
+        byte[] bytes = new byte[6];
+        random.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes); // Creates an 8-char string
+    }
 
     @Override
     public StoreResponse createStore(CreateStoreRequest request) {
+
+        String plainPassword = request.getPassword();
+        if (plainPassword == null || plainPassword.trim().isEmpty()) {
+            plainPassword = generateRandomPassword();
+        }
+
+        // Check if user already exists
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new RuntimeException("Email already exists");
+        }
+
+        User user = User.builder()
+                .firstName(request.getName())
+                .lastName("Store")
+                .email(request.getEmail())
+                .phone(request.getPhone())
+                .password(passwordEncoder.encode(plainPassword))
+                .role("STORE")
+                .active(true)
+                .build();
+
+        userRepository.save(user);
 
         Store store = Store.builder()
                 .storeCode(request.getStoreCode())
@@ -35,7 +72,9 @@ public class StoreServiceImpl implements StoreService {
 
         storeRepository.save(store);
 
-        return map(store);
+        StoreResponse response = map(store);
+        response.setGeneratedPassword(plainPassword);
+        return response;
     }
 
     @Override
