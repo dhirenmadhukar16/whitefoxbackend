@@ -22,4 +22,5 @@ public interface CustomerService {
             CreateCustomerRequest request);
 
     void deactivateCustomer(UUID id);
+    CustomerResponse getCustomerByPhone(String phone);
 }

@@ -1,10 +1,15 @@
 package com.example.whitefox.orders.enums;
 
-
-
 public enum PaymentStatus {
+
     UNPAID,
-    PAID,
     PARTIAL,
+
+    COD_PENDING,
+
+    ADVANCE_PAID,
+
+    PAID,
+
     REFUNDED
 }

@@ -63,7 +63,10 @@ public class SecurityConfig {
                                 "/api/truck-logistics/**",
                                 "/api/truck-logistics/**",
                                 "/api/hq/**",
-                                "/api/store-app/**"
+                                "/api/store-app/**",
+                                "/api/customers/**",
+                                "/api/admin/catalog/**",
+                                "/api/orders/**"
 
                         )
                         .permitAll()

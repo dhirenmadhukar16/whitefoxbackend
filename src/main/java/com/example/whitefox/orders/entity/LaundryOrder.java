@@ -58,6 +58,10 @@ public class LaundryOrder {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    private Double paidAmount;
+
+    private Double remainingAmount;
     @ManyToOne
     @JoinColumn(name = "delivery_rider_id")
     private Rider deliveryRider;
@@ -68,6 +72,8 @@ public class LaundryOrder {
         paymentStatus = PaymentStatus.UNPAID;
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        paidAmount = 0.0;
+        remainingAmount = totalAmount != null ? totalAmount : 0.0;
     }
 
     @PreUpdate

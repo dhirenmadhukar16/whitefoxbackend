@@ -491,7 +491,7 @@ public class AdminPanelServiceImpl implements AdminPanelService {
                 )
                 .partialPaidOrders(
                         orders.stream()
-                                .filter(o -> o.getPaymentStatus() == PaymentStatus.PARTIAL)
+                                .filter(o -> o.getPaymentStatus() == PaymentStatus.ADVANCE_PAID)
                                 .count()
                 )
                 .pendingAmount(pendingAmount)

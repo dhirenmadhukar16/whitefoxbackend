@@ -12,4 +12,7 @@ public interface InvoiceRepository
     Optional<Invoice> findByOrderId(UUID orderId);
 
     Optional<Invoice> findByInvoiceNumber(String invoiceNumber);
+
+    boolean existsByOrderId(UUID orderId);
+
 }

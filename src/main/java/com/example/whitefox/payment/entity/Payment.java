@@ -1,10 +1,10 @@
 package com.example.whitefox.payment.entity;
 
-
-
 import com.example.whitefox.orders.entity.LaundryOrder;
 import com.example.whitefox.payment.enums.PaymentMode;
 import com.example.whitefox.payment.enums.PaymentTransactionStatus;
+import com.example.whitefox.store.entity.Store;
+//import com.example.whitefox.stores.entity.Store;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -24,9 +24,13 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
     private LaundryOrder order;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_id", nullable = false)
+    private Store store;
 
     @Enumerated(EnumType.STRING)
     private PaymentMode paymentMode;
@@ -34,10 +38,13 @@ public class Payment {
     @Enumerated(EnumType.STRING)
     private PaymentTransactionStatus status;
 
+    @Column(nullable = false)
     private Double amount;
 
+    @Column(length = 200)
     private String transactionReference;
 
+    @Column(length = 500)
     private String remarks;
 
     private LocalDateTime paidAt;
@@ -48,6 +55,7 @@ public class Payment {
 
     @PrePersist
     public void prePersist() {
+
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
 

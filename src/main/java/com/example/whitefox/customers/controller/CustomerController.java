@@ -56,4 +56,8 @@ public class CustomerController {
 
         return ResponseEntity.noContent().build();
     }
+    @GetMapping("/phone/{phone}")
+    public CustomerResponse getCustomerByPhone(@PathVariable String phone) {
+        return customerService.getCustomerByPhone(phone);
+    }
 }

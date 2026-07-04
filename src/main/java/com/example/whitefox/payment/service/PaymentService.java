@@ -21,4 +21,12 @@ public interface PaymentService {
     );
 
     PaymentSummaryResponse getPaymentSummary();
+    RazorpayCreateOrderResponse createRazorpayOrder(
+            RazorpayCreateOrderRequest request
+    );
+
+    PaymentResponse verifyRazorpayPayment(
+            RazorpayVerifyPaymentRequest request
+    );
+    void markCodPending(UUID orderId);
 }
