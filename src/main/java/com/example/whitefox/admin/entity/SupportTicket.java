@@ -17,6 +17,10 @@ public class SupportTicket {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    private UUID customerId;
+    private UUID storeId;
+    private UUID orderId; // Optional link to specific order
+
     private String customerName;
 
     private String issueCategory; // e.g., "Delivery Delay", "Damaged Item", "App Issue"

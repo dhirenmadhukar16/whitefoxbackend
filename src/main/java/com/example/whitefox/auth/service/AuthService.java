@@ -44,6 +44,8 @@ public class AuthService {
                 .token(token)
                 .email(user.getEmail())
                 .role(user.getRole())
+                .storeId(user.getStoreId())
+                .userId(user.getId())
                 .build();
     }
 

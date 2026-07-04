@@ -28,6 +28,7 @@ public class User {
     private String password;
     private String role;
     private Boolean active;
+    private UUID storeId;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

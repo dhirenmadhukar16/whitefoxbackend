@@ -39,7 +39,8 @@ public class AdminOrderController {
                 .filter(o -> o.getStatus() == status)
                 .map(o -> {
                     Map<String, Object> map = new HashMap<>();
-                    map.put("id", o.getOrderNumber() != null ? o.getOrderNumber() : "ORD-" + o.getId().toString());
+                    map.put("id", o.getId().toString());
+                    map.put("orderNumber", o.getOrderNumber() != null ? o.getOrderNumber() : "ORD-" + o.getId().toString().substring(0, 8).toUpperCase());
                     map.put("customer", o.getCustomer() != null ? o.getCustomer().getName() : "Unknown");
                     map.put("items", 0); // Placeholder until order items relationship is verified
                     map.put("amount", o.getTotalAmount());

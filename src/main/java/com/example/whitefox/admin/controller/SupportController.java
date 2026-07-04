@@ -16,6 +16,9 @@ public class SupportController {
     @Autowired
     private SupportTicketRepository supportTicketRepository;
 
+    @Autowired
+    private com.example.whitefox.admin.repository.SupportTicketReplyRepository replyRepository;
+
     @GetMapping
     public ResponseEntity<List<SupportTicket>> getTickets() {
         return ResponseEntity.ok(supportTicketRepository.findAll());
@@ -24,5 +27,17 @@ public class SupportController {
     @PostMapping
     public ResponseEntity<SupportTicket> createTicket(@RequestBody SupportTicket ticket) {
         return ResponseEntity.ok(supportTicketRepository.save(ticket));
+    }
+
+    @GetMapping("/{id}/replies")
+    public ResponseEntity<List<com.example.whitefox.admin.entity.SupportTicketReply>> getReplies(@PathVariable java.util.UUID id) {
+        return ResponseEntity.ok(replyRepository.findByTicketIdOrderByTimestampAsc(id));
+    }
+
+    @PostMapping("/{id}/replies")
+    public ResponseEntity<com.example.whitefox.admin.entity.SupportTicketReply> addReply(@PathVariable java.util.UUID id, @RequestBody com.example.whitefox.admin.entity.SupportTicketReply reply) {
+        reply.setTicketId(id);
+        reply.setSenderType("ADMIN");
+        return ResponseEntity.ok(replyRepository.save(reply));
     }
 }

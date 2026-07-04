@@ -17,7 +17,9 @@ public class AuditLog {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    private String adminName;
+    private String actorName; // Name of Admin, Store Staff, Customer, etc.
+
+    private String actorType; // ADMIN, STORE, CUSTOMER, SYSTEM
 
     private String action; // e.g., "Deleted Store", "Updated Pricing"
 

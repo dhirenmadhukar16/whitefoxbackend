@@ -69,6 +69,21 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .build();
             storeRepository.save(store);
 
+            // Create a store user linked to this store
+            if (userRepository.findByEmail("store@whitefox.com").isEmpty()) {
+                User storeUser = User.builder()
+                        .firstName("Store")
+                        .lastName("Manager")
+                        .email("store@whitefox.com")
+                        .phone("1234567891")
+                        .password(passwordEncoder.encode("password"))
+                        .role("STORE")
+                        .storeId(store.getId())
+                        .active(true)
+                        .build();
+                userRepository.save(storeUser);
+            }
+
             Customer customer = Customer.builder()
                     .customerCode("CUST-001")
                     .name("John Doe")
@@ -88,6 +103,21 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .build();
             riderRepository.save(rider);
 
+            // Create a rider user for the rider app
+            if (userRepository.findByEmail("speedy@whitefox.com").isEmpty()) {
+                User riderUser = User.builder()
+                        .firstName("Speedy")
+                        .lastName("Gonzalez")
+                        .email("speedy@whitefox.com")
+                        .phone("5551234567")
+                        .password(passwordEncoder.encode("password"))
+                        .role("RIDER")
+                        .storeId(store.getId())
+                        .active(true)
+                        .build();
+                userRepository.save(riderUser);
+            }
+
             LaundryOrder order = LaundryOrder.builder()
                     .orderNumber("ORD-1001")
                     .customer(customer)
@@ -102,6 +132,40 @@ public class DatabaseSeeder implements CommandLineRunner {
             laundryOrderRepository.save(order);
 
             System.out.println("✅ DATABASE SEEDED WITH MOCK DATA!");
+        }
+
+        // Ensure store user exists even if store was already seeded
+        if (userRepository.findByEmail("store@whitefox.com").isEmpty()) {
+            var stores = storeRepository.findAll();
+            var storeId = stores.isEmpty() ? null : stores.get(0).getId();
+            User storeUser = User.builder()
+                    .firstName("Store")
+                    .lastName("Manager")
+                    .email("store@whitefox.com")
+                    .phone("1234567891")
+                    .password(passwordEncoder.encode("password"))
+                    .role("STORE")
+                    .storeId(storeId)
+                    .active(true)
+                    .build();
+            userRepository.save(storeUser);
+        }
+
+        // Ensure rider user exists even if rider was already seeded
+        if (userRepository.findByEmail("speedy@whitefox.com").isEmpty()) {
+            var stores = storeRepository.findAll();
+            var storeId = stores.isEmpty() ? null : stores.get(0).getId();
+            User riderUser = User.builder()
+                    .firstName("Speedy")
+                    .lastName("Gonzalez")
+                    .email("speedy@whitefox.com")
+                    .phone("5551234567")
+                    .password(passwordEncoder.encode("password"))
+                    .role("RIDER")
+                    .storeId(storeId)
+                    .active(true)
+                    .build();
+            userRepository.save(riderUser);
         }
     }
 }

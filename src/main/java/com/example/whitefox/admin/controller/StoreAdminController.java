@@ -22,12 +22,18 @@ public class StoreAdminController {
     private StoreExpenseRepository storeExpenseRepository;
 
     @GetMapping("/machines")
-    public ResponseEntity<List<Machine>> getAllMachines() {
+    public ResponseEntity<List<Machine>> getAllMachines(@RequestParam(required = false) java.util.UUID storeId) {
+        if (storeId != null) {
+            return ResponseEntity.ok(machineRepository.findAll().stream().filter(m -> storeId.equals(m.getStoreId())).toList());
+        }
         return ResponseEntity.ok(machineRepository.findAll());
     }
 
     @GetMapping("/expenses")
-    public ResponseEntity<List<StoreExpense>> getAllExpenses() {
+    public ResponseEntity<List<StoreExpense>> getAllExpenses(@RequestParam(required = false) java.util.UUID storeId) {
+        if (storeId != null) {
+            return ResponseEntity.ok(storeExpenseRepository.findAll().stream().filter(e -> storeId.equals(e.getStoreId())).toList());
+        }
         return ResponseEntity.ok(storeExpenseRepository.findAll());
     }
 }
