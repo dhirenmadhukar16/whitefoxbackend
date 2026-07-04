@@ -43,14 +43,17 @@ public class StoreOperationsServiceImpl implements StoreOperationsService {
 
         List<LaundryOrder> orders = orderRepository.findAll()
                 .stream()
+                .filter(o -> o.getStore().getId().equals(storeId))
                 .toList();
 
         List<PickupBill> pickupBills = pickupBillRepository.findAll()
                 .stream()
+                .filter(p -> p.getStore().getId().equals(storeId))
                 .toList();
 
         List<Garment> garments = garmentRepository.findAll()
                 .stream()
+                .filter(g -> g.getOrder().getStore().getId().equals(storeId))
                 .toList();
 
         double revenue = orders.stream()
@@ -93,6 +96,7 @@ public class StoreOperationsServiceImpl implements StoreOperationsService {
     public List<StoreOrderSummaryResponse> getOrdersByStore(UUID storeId) {
         return orderRepository.findAll()
                 .stream()
+                .filter(o -> o.getStore().getId().equals(storeId))
                 .map(this::mapOrder)
                 .toList();
     }
@@ -101,6 +105,7 @@ public class StoreOperationsServiceImpl implements StoreOperationsService {
     public List<StoreGarmentResponse> getGarmentsByStore(UUID storeId) {
         return garmentRepository.findAll()
                 .stream()
+                .filter(g -> g.getOrder().getStore().getId().equals(storeId))
                 .map(this::mapGarment)
                 .toList();
     }
@@ -109,6 +114,7 @@ public class StoreOperationsServiceImpl implements StoreOperationsService {
     public Object getPickupBillsByStore(UUID storeId) {
         return pickupBillRepository.findAll()
                 .stream()
+                .filter(p -> p.getStore().getId().equals(storeId))
                 .map(this::mapPickupBill)
                 .toList();
     }

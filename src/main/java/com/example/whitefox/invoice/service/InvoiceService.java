@@ -9,4 +9,6 @@ public interface InvoiceService {
     InvoiceResponse getInvoice(UUID invoiceId);
 
     InvoiceResponse getInvoiceByOrder(UUID orderId);
+
+    byte[] generateInvoicePdf(UUID invoiceId);
 }

@@ -144,7 +144,7 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
 
     @Override
     public List<CustomerBookingResponse> getBookingsByStore(UUID storeId) {
-        return bookingRepository.findAll()
+        return bookingRepository.findByStoreId(storeId)
                 .stream()
                 .map(this::map)
                 .toList();

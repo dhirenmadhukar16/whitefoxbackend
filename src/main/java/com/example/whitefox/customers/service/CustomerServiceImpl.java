@@ -110,4 +110,11 @@ public class CustomerServiceImpl
                 .active(customer.getActive())
                 .build();
     }
+    @Override
+    public CustomerResponse getCustomerByPhone(String phone) {
+        Customer customer = customerRepository.findByPhone(phone)
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        return map(customer);
+    }
 }

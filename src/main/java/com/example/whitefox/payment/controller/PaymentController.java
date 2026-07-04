@@ -16,9 +16,7 @@ public class PaymentController {
     private final PaymentService paymentService;
 
     @PostMapping
-    public PaymentResponse createPayment(
-            @RequestBody CreatePaymentRequest request
-    ) {
+    public PaymentResponse createPayment(@RequestBody CreatePaymentRequest request) {
         return paymentService.createPayment(request);
     }
 
@@ -28,17 +26,18 @@ public class PaymentController {
     }
 
     @GetMapping("/{paymentId}")
-    public PaymentResponse getPayment(
-            @PathVariable UUID paymentId
-    ) {
+    public PaymentResponse getPayment(@PathVariable UUID paymentId) {
         return paymentService.getPayment(paymentId);
     }
 
     @GetMapping("/orders/{orderId}")
-    public List<PaymentResponse> getPaymentsByOrder(
-            @PathVariable UUID orderId
-    ) {
+    public List<PaymentResponse> getPaymentsByOrder(@PathVariable UUID orderId) {
         return paymentService.getPaymentsByOrder(orderId);
+    }
+
+    @PatchMapping("/orders/{orderId}/cod")
+    public void markCodPending(@PathVariable UUID orderId) {
+        paymentService.markCodPending(orderId);
     }
 
     @PatchMapping("/{paymentId}/status")
@@ -46,14 +45,25 @@ public class PaymentController {
             @PathVariable UUID paymentId,
             @RequestBody UpdatePaymentStatusRequest request
     ) {
-        return paymentService.updatePaymentStatus(
-                paymentId,
-                request
-        );
+        return paymentService.updatePaymentStatus(paymentId, request);
     }
 
     @GetMapping("/summary")
     public PaymentSummaryResponse getPaymentSummary() {
         return paymentService.getPaymentSummary();
+    }
+
+    @PostMapping("/razorpay/create-order")
+    public RazorpayCreateOrderResponse createRazorpayOrder(
+            @RequestBody RazorpayCreateOrderRequest request
+    ) {
+        return paymentService.createRazorpayOrder(request);
+    }
+
+    @PostMapping("/razorpay/verify")
+    public PaymentResponse verifyRazorpayPayment(
+            @RequestBody RazorpayVerifyPaymentRequest request
+    ) {
+        return paymentService.verifyRazorpayPayment(request);
     }
 }
