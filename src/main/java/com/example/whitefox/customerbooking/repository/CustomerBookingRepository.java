@@ -16,5 +16,5 @@ public interface CustomerBookingRepository
 
     List<CustomerBooking> findByAssignedRiderId(UUID riderId);
 
-//    List<CustomerBooking> findByAssignedRiderId(UUID riderId);
+    List<CustomerBooking> findByStoreIsNull();
 }

@@ -47,18 +47,6 @@ public class StoreServiceImpl implements StoreService {
             throw new RuntimeException("Email already exists");
         }
 
-        User user = User.builder()
-                .firstName(request.getName())
-                .lastName("Store")
-                .email(request.getEmail())
-                .phone(request.getPhone())
-                .password(passwordEncoder.encode(plainPassword))
-                .role("STORE")
-                .active(true)
-                .build();
-
-        userRepository.save(user);
-
         Store store = Store.builder()
                 .storeCode(request.getStoreCode())
                 .name(request.getName())
@@ -71,6 +59,19 @@ public class StoreServiceImpl implements StoreService {
                 .build();
 
         storeRepository.save(store);
+
+        User user = User.builder()
+                .firstName(request.getName())
+                .lastName("Store")
+                .email(request.getEmail())
+                .phone(request.getPhone())
+                .password(passwordEncoder.encode(plainPassword))
+                .role("STORE")
+                .storeId(store.getId())
+                .active(true)
+                .build();
+
+        userRepository.save(user);
 
         StoreResponse response = map(store);
         response.setGeneratedPassword(plainPassword);
@@ -95,12 +96,17 @@ public class StoreServiceImpl implements StoreService {
     }
 
     private StoreResponse map(Store store) {
+        String loginEmail = userRepository.findFirstByStoreId(store.getId())
+                .map(User::getEmail)
+                .orElse(null);
+
         return StoreResponse.builder()
                 .id(store.getId())
                 .storeCode(store.getStoreCode())
                 .name(store.getName())
                 .phone(store.getPhone())
                 .email(store.getEmail())
+                .loginEmail(loginEmail)
                 .address(store.getAddress())
                 .city(store.getCity())
                 .active(store.getActive())
@@ -137,5 +143,14 @@ public class StoreServiceImpl implements StoreService {
         store.setActive(false);
 
         storeRepository.save(store);
+    }
+
+    @Override
+    public void resetStorePassword(UUID storeId, String newPassword) {
+        User storeUser = userRepository.findFirstByStoreId(storeId)
+                .orElseThrow(() -> new RuntimeException("Store user not found"));
+        
+        storeUser.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(storeUser);
     }
 }

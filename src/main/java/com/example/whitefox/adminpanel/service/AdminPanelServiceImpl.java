@@ -43,9 +43,12 @@ import com.example.whitefox.trucklogistics.enums.TruckTripStatus;
 import com.example.whitefox.trucklogistics.repository.TruckRepository;
 import com.example.whitefox.trucklogistics.repository.TruckTripRepository;
 import com.example.whitefox.trucklogistics.repository.TruckManifestRepository;
+import com.example.whitefox.auth.repository.UserRepository;
+
 @Service
 @RequiredArgsConstructor
 public class AdminPanelServiceImpl implements AdminPanelService {
+    private final UserRepository userRepository;
     private final CustomerAddressRepository addressRepository;
     private final CustomerReviewRepository reviewRepository;
     private final StoreRepository storeRepository;
@@ -818,9 +821,16 @@ public class AdminPanelServiceImpl implements AdminPanelService {
                             .mapToDouble(LaundryOrder::getTotalAmount)
                             .sum();
 
+                    String loginEmail = userRepository.findFirstByStoreId(store.getId())
+                            .map(com.example.whitefox.auth.entity.User::getEmail)
+                            .orElse(null);
+
                     return AdminStoreStatsResponse.builder()
                             .storeId(store.getId())
                             .storeName(store.getName())
+                            .city(store.getCity())
+                            .address(store.getAddress())
+                            .loginEmail(loginEmail)
 
                             .totalOrders((long) storeOrders.size())
 
@@ -854,6 +864,75 @@ public class AdminPanelServiceImpl implements AdminPanelService {
                             .build();
                 })
                 .toList();
+    }
+
+    @Override
+    public AdminRiderDetailResponse getRiderDetails(java.util.UUID id) {
+        Rider rider = riderRepository.findById(id)
+                .orElseThrow(() -> new com.example.whitefox.common.exceptions.ResourceNotFoundException("Rider not found"));
+                
+        String loginEmail = userRepository.findByEmail(rider.getEmail())
+                .map(com.example.whitefox.auth.entity.User::getEmail)
+                .orElse(null);
+                
+        long totalPickups = pickupBillRepository.findAll().stream()
+                .filter(p -> p.getRider() != null && p.getRider().getId().equals(id))
+                .count();
+                
+        long totalDeliveries = orderRepository.findAll().stream()
+                .filter(o -> o.getDeliveryRider() != null && o.getDeliveryRider().getId().equals(id))
+                .count();
+
+        return AdminRiderDetailResponse.builder()
+                .riderId(rider.getId())
+                .riderName(rider.getName())
+                .riderCode(rider.getRiderCode())
+                .phone(rider.getPhone())
+                .email(rider.getEmail())
+                .status(rider.getStatus() != null ? rider.getStatus().name() : "UNKNOWN")
+                .vehicleNumber(rider.getVehicleNumber())
+                .latitude(rider.getLatitude())
+                .longitude(rider.getLongitude())
+                .loginEmail(loginEmail)
+                .totalPickups(totalPickups)
+                .totalDeliveries(totalDeliveries)
+                .recentActivity(java.util.Collections.emptyList()) 
+                .build();
+    }
+
+    @Override
+    public void resetRiderPassword(java.util.UUID id, String newPassword) {
+        Rider rider = riderRepository.findById(id)
+                .orElseThrow(() -> new com.example.whitefox.common.exceptions.ResourceNotFoundException("Rider not found"));
+                
+        com.example.whitefox.auth.entity.User user = userRepository.findByEmail(rider.getEmail())
+                .orElseThrow(() -> new com.example.whitefox.common.exceptions.ResourceNotFoundException("Rider user account not found"));
+                
+        org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder encoder = new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
+        user.setPassword(encoder.encode(newPassword));
+        userRepository.save(user);
+    }
+    
+    @Override
+    public void assignRiderToOrder(java.util.UUID orderId, java.util.UUID riderId) {
+        LaundryOrder order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new com.example.whitefox.common.exceptions.ResourceNotFoundException("Order not found"));
+        Rider rider = riderRepository.findById(riderId)
+                .orElseThrow(() -> new com.example.whitefox.common.exceptions.ResourceNotFoundException("Rider not found"));
+                
+        order.setDeliveryRider(rider);
+        if (order.getStatus() == OrderStatus.CREATED) {
+            order.setStatus(OrderStatus.PICKUP_ASSIGNED);
+        }
+        orderRepository.save(order);
+    }
+    
+    @Override
+    public void cancelOrder(java.util.UUID orderId) {
+        LaundryOrder order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new com.example.whitefox.common.exceptions.ResourceNotFoundException("Order not found"));
+        order.setStatus(OrderStatus.CANCELLED);
+        orderRepository.save(order);
     }
 }
 

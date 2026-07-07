@@ -61,4 +61,14 @@ public class StoreController {
 
         return ResponseEntity.ok("Store deactivated successfully");
     }
+
+    @PatchMapping("/{id}/reset-password")
+    public ResponseEntity<String> resetStorePassword(
+            @PathVariable UUID id,
+            @RequestBody com.example.whitefox.store.dto.ResetStorePasswordRequest request) {
+
+        storeService.resetStorePassword(id, request.getNewPassword());
+
+        return ResponseEntity.ok("Store password reset successfully");
+    }
 }

@@ -19,4 +19,6 @@ public interface StoreService {
     StoreResponse getStore(UUID id);
     StoreResponse updateStore(UUID id, CreateStoreRequest request);
     void deactivateStore(UUID id);
+
+    void resetStorePassword(UUID storeId, String newPassword);
 }

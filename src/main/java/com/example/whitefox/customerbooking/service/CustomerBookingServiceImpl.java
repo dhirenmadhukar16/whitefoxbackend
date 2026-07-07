@@ -111,6 +111,14 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
     }
 
     @Override
+    public List<CustomerBookingResponse> getUnassignedBookings() {
+        return bookingRepository.findByStoreIsNull()
+                .stream()
+                .map(this::map)
+                .toList();
+    }
+
+    @Override
     public CustomerBookingResponse rescheduleBooking(
             UUID bookingId,
             RescheduleBookingRequest request

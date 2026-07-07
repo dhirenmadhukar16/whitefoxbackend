@@ -21,6 +21,8 @@ public class StoreResponse {
 
     private String email;
 
+    private String loginEmail;
+
     private String address;
 
     private String city;

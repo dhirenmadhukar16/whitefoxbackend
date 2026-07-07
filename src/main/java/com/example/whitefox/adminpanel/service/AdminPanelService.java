@@ -10,11 +10,17 @@ import com.example.whitefox.adminpanel.dto.AdminHqOperationsResponse;
 import com.example.whitefox.adminpanel.dto.AdminSearchResponse;
 import com.example.whitefox.adminpanel.dto.AdminTruckStatsResponse;
 
+import java.util.UUID;
+
 public interface AdminPanelService {
 
     AdminDashboardResponse getDashboard();
     java.util.List<AdminStoreStatsResponse> getStoreStats();
     List<AdminRiderStatsResponse> getRiderStats();
+    AdminRiderDetailResponse getRiderDetails(UUID id);
+    void resetRiderPassword(UUID id, String newPassword);
+    void assignRiderToOrder(UUID orderId, UUID riderId);
+    void cancelOrder(UUID orderId);
     List<AdminOrderResponse> getAllOrdersForAdmin();
     List<AdminCustomerStatsResponse> getCustomerStats();
     List<AdminPickupBillResponse> getAllPickupBillsForAdmin();

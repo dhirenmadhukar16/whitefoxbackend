@@ -31,6 +31,11 @@ public class CustomerBookingController {
         return customerBookingService.getBooking(bookingId);
     }
 
+    @GetMapping("/unassigned")
+    public List<CustomerBookingResponse> getUnassignedBookings() {
+        return customerBookingService.getUnassignedBookings();
+    }
+
     @GetMapping("/customers/{customerId}")
     public List<CustomerBookingResponse> getBookingsByCustomer(
             @PathVariable UUID customerId

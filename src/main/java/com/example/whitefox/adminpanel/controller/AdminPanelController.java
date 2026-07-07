@@ -14,6 +14,8 @@ import com.example.whitefox.adminpanel.dto.AdminFinanceStatsResponse;
 import com.example.whitefox.adminpanel.dto.AdminRiderStatsResponse;
 import com.example.whitefox.adminpanel.dto.AdminBookingResponse;
 import com.example.whitefox.adminpanel.dto.AdminCatalogStatsResponse;
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/admin-panel")
 @RequiredArgsConstructor
@@ -33,6 +35,33 @@ public class AdminPanelController {
     public List<AdminRiderStatsResponse> getRiderStats() {
         return adminPanelService.getRiderStats();
     }
+    @GetMapping("/riders/{id}")
+    public AdminRiderDetailResponse getRiderDetails(@PathVariable UUID id) {
+        return adminPanelService.getRiderDetails(id);
+    }
+    
+    @PatchMapping("/riders/{id}/reset-password")
+    public org.springframework.http.ResponseEntity<String> resetRiderPassword(
+            @PathVariable UUID id, 
+            @RequestBody ResetRiderPasswordRequest request) {
+        adminPanelService.resetRiderPassword(id, request.getNewPassword());
+        return org.springframework.http.ResponseEntity.ok("Rider password reset successfully");
+    }
+
+    @PatchMapping("/orders/{id}/assign-rider")
+    public org.springframework.http.ResponseEntity<String> assignRiderToOrder(
+            @PathVariable UUID id,
+            @RequestBody com.example.whitefox.customerbooking.dto.AssignRiderRequest request) {
+        adminPanelService.assignRiderToOrder(id, request.getRiderId());
+        return org.springframework.http.ResponseEntity.ok("Rider assigned successfully");
+    }
+
+    @PatchMapping("/orders/{id}/cancel")
+    public org.springframework.http.ResponseEntity<String> cancelOrder(@PathVariable UUID id) {
+        adminPanelService.cancelOrder(id);
+        return org.springframework.http.ResponseEntity.ok("Order cancelled successfully");
+    }
+
     @GetMapping("/garments/stats")
     public AdminGarmentStatsResponse getGarmentStats() {
         return adminPanelService.getGarmentStats();

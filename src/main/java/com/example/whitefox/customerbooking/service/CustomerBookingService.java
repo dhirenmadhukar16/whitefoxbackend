@@ -28,6 +28,9 @@ public interface CustomerBookingService {
     CustomerBookingResponse markPickupBillCreated(UUID bookingId);
 
     CustomerBookingResponse cancelBooking(UUID bookingId);
+    
+    List<CustomerBookingResponse> getUnassignedBookings();
+
     CustomerBookingResponse rescheduleBooking(
             UUID bookingId,
             RescheduleBookingRequest request
