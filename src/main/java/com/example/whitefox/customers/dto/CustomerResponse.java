@@ -26,4 +26,6 @@ public class CustomerResponse {
     private String city;
 
     private Boolean active;
+
+    private Integer loyaltyPoints;
 }

@@ -4,6 +4,7 @@ import com.example.whitefox.orders.entity.LaundryOrder;
 import com.example.whitefox.orders.entity.OrderItem;
 import com.example.whitefox.orders.repository.LaundryOrderRepository;
 import com.example.whitefox.orders.repository.OrderItemRepository;
+import com.example.whitefox.orders.enums.OrderStatus;
 import com.example.whitefox.tracking.dto.*;
 import com.example.whitefox.tracking.entity.Garment;
 import com.example.whitefox.tracking.entity.GarmentTrackingHistory;
@@ -40,8 +41,8 @@ public class GarmentTrackingServiceImpl implements GarmentTrackingService {
                 .itemName(request.getItemName())
                 .serviceType(request.getServiceType())
                 .color(request.getColor())
-                .conditionNote(request.getConditionNote())
-                .photoUrl(request.getPhotoUrl())
+                .stains(request.getConditionNote())
+                .photoUrls(java.util.Collections.singletonList(request.getPhotoUrl()))
                 .status(GarmentStatus.TAGGED_AT_STORE)
                 .build();
 
@@ -53,24 +54,24 @@ public class GarmentTrackingServiceImpl implements GarmentTrackingService {
     }
 
     @Override
-    public List<GarmentResponse> generateGarmentsFromOrder(UUID orderId) {
+    public List<GarmentResponse> generateGarmentsFromOrder(UUID orderId, com.example.whitefox.tracking.dto.GenerateGarmentsRequest request) {
 
         LaundryOrder order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
-        List<OrderItem> orderItems = orderItemRepository.findByOrderId(orderId);
-
         List<GarmentResponse> responses = new ArrayList<>();
 
-        for (OrderItem item : orderItems) {
-
-            for (int i = 1; i <= item.getQuantity(); i++) {
-
+        if (request != null && request.getGarments() != null) {
+            for (com.example.whitefox.tracking.dto.GarmentDetailsDto dto : request.getGarments()) {
                 Garment garment = Garment.builder()
                         .order(order)
                         .storeQrCode(generateStoreQrCode())
-                        .itemName(item.getItemName())
-                        .serviceType(item.getServiceType())
+                        .itemName(dto.getItemName())
+                        .serviceType(dto.getServiceType())
+                        .color(dto.getColor())
+                        .stains(dto.getStains())
+                        .specialInstructions(dto.getSpecialInstructions())
+                        .photoUrls(dto.getPhotoUrls())
                         .status(GarmentStatus.TAGGED_AT_STORE)
                         .build();
 
@@ -79,7 +80,7 @@ public class GarmentTrackingServiceImpl implements GarmentTrackingService {
                 saveHistory(
                         saved,
                         GarmentStatus.TAGGED_AT_STORE,
-                        "Garment auto-generated from order item"
+                        "Garment tagged at store with details"
                 );
 
                 responses.add(map(saved));
@@ -146,6 +147,98 @@ public class GarmentTrackingServiceImpl implements GarmentTrackingService {
         return map(garment);
     }
 
+    @Override
+    public GarmentResponse scanAction(String qrCode, String role) {
+        Garment garment = garmentRepository.findByStoreQrCode(qrCode)
+                .or(() -> garmentRepository.findByOutingQrCode(qrCode))
+                .orElseThrow(() -> new RuntimeException("QR not found"));
+
+        GarmentStatus currentStatus = garment.getStatus();
+        GarmentStatus newStatus = currentStatus;
+
+        if ("TRUCK_DRIVER".equals(role)) {
+            if (currentStatus == GarmentStatus.TAGGED_AT_STORE) {
+                newStatus = GarmentStatus.LOADED_FOR_HQ;
+            } else if (currentStatus == GarmentStatus.PROCESSED_QR_REATTACHED) {
+                newStatus = GarmentStatus.LOADED_FOR_STORE;
+            }
+        } else if ("HQ_ADMIN".equals(role) || "HQ".equals(role)) {
+            if (currentStatus == GarmentStatus.LOADED_FOR_HQ) {
+                newStatus = GarmentStatus.RECEIVED_AT_HQ;
+            }
+        } else if ("STORE_MANAGER".equals(role) || "STORE".equals(role)) {
+            if (currentStatus == GarmentStatus.LOADED_FOR_STORE) {
+                newStatus = GarmentStatus.DROPPED_AT_STORE;
+            }
+        }
+
+        if (newStatus != currentStatus) {
+            garment.setStatus(newStatus);
+            garment = garmentRepository.save(garment);
+            saveHistory(garment, newStatus, "Status updated via smart scan by " + role);
+
+            checkAndUpdateOrderStatus(garment.getOrder(), newStatus);
+        }
+
+        return map(garment);
+    }
+
+    @Override
+    public List<GarmentResponse> getGarmentsByStatus(String status) {
+        try {
+            GarmentStatus garmentStatus = GarmentStatus.valueOf(status.toUpperCase());
+            return garmentRepository.findByStatus(garmentStatus)
+                    .stream()
+                    .map(this::map)
+                    .toList();
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Invalid status: " + status);
+        }
+    }
+
+    @Override
+    public List<GarmentResponse> getAllHqGarments() {
+        // Return all garments that are currently at HQ (in any HQ processing stage)
+        List<GarmentStatus> hqStatuses = List.of(
+                GarmentStatus.RECEIVED_AT_HQ,
+                GarmentStatus.PROCESSING,
+                GarmentStatus.PROCESSED_QR_REATTACHED
+        );
+        return garmentRepository.findByStatusIn(hqStatuses)
+                .stream()
+                .map(this::map)
+                .toList();
+    }
+
+
+    private void checkAndUpdateOrderStatus(LaundryOrder order, GarmentStatus newGarmentStatus) {
+
+        List<Garment> garments = garmentRepository.findByOrderId(order.getId());
+        
+        long validGarmentCount = garments.stream()
+                .filter(g -> g.getStatus() != GarmentStatus.REPORTED_MISSING)
+                .count();
+
+        long matchingGarmentCount = garments.stream()
+                .filter(g -> g.getStatus() == newGarmentStatus)
+                .count();
+
+        boolean allMatch = (validGarmentCount > 0) && (matchingGarmentCount == validGarmentCount);
+
+        if (allMatch) {
+            if (newGarmentStatus == GarmentStatus.LOADED_FOR_HQ) {
+                order.setStatus(OrderStatus.SENT_TO_HQ);
+            } else if (newGarmentStatus == GarmentStatus.RECEIVED_AT_HQ) {
+                order.setStatus(OrderStatus.RECEIVED_AT_HQ);
+            } else if (newGarmentStatus == GarmentStatus.LOADED_FOR_STORE) {
+                order.setStatus(OrderStatus.READY_FOR_DELIVERY); 
+            } else if (newGarmentStatus == GarmentStatus.DROPPED_AT_STORE) {
+                order.setStatus(OrderStatus.RECEIVED_AT_STORE_AFTER_PROCESSING);
+            }
+            orderRepository.save(order);
+        }
+    }
+
     private String generateStoreQrCode() {
         return "STORE-QR-" + System.currentTimeMillis() + "-" + UUID.randomUUID();
     }
@@ -180,13 +273,19 @@ public class GarmentTrackingServiceImpl implements GarmentTrackingService {
         return GarmentResponse.builder()
                 .id(garment.getId())
                 .orderId(garment.getOrder().getId())
+                .storeId(garment.getOrder().getStore() != null ? garment.getOrder().getStore().getId() : null)
+                .storeName(garment.getOrder().getStore() != null ? garment.getOrder().getStore().getName() : null)
                 .storeQrCode(garment.getStoreQrCode())
                 .outingQrCode(garment.getOutingQrCode())
                 .itemName(garment.getItemName())
                 .serviceType(garment.getServiceType())
                 .color(garment.getColor())
-                .conditionNote(garment.getConditionNote())
-                .photoUrl(garment.getPhotoUrl())
+                .stains(garment.getStains())
+                .specialInstructions(garment.getSpecialInstructions())
+                .photoUrls(garment.getPhotoUrls())
+                .customerName(garment.getOrder() != null && garment.getOrder().getCustomer() != null ? garment.getOrder().getCustomer().getName() : null)
+                .customerPhone(garment.getOrder() != null && garment.getOrder().getCustomer() != null ? garment.getOrder().getCustomer().getPhone() : null)
+                .customerId(garment.getOrder() != null && garment.getOrder().getCustomer() != null ? garment.getOrder().getCustomer().getId() : null)
                 .status(garment.getStatus())
                 .history(history)
                 .build();
@@ -200,17 +299,22 @@ public class GarmentTrackingServiceImpl implements GarmentTrackingService {
             throw new RuntimeException("No garments found for this order");
         }
 
+        LaundryOrder order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+        order.setStatus(OrderStatus.SENT_TO_HQ);
+        orderRepository.save(order);
+
         List<GarmentResponse> responses = new ArrayList<>();
 
         for (Garment garment : garments) {
 
-            garment.setStatus(GarmentStatus.SENT_TO_HQ);
+            garment.setStatus(GarmentStatus.LOADED_FOR_HQ);
 
             Garment saved = garmentRepository.save(garment);
 
             saveHistory(
                     saved,
-                    GarmentStatus.SENT_TO_HQ,
+                    GarmentStatus.LOADED_FOR_HQ,
                     "Garment sent from store to HQ"
             );
 
@@ -258,13 +362,13 @@ public class GarmentTrackingServiceImpl implements GarmentTrackingService {
         List<GarmentResponse> responses = new ArrayList<>();
 
         for (Garment garment : garments) {
-            garment.setStatus(GarmentStatus.SENT_TO_STORE);
+            garment.setStatus(GarmentStatus.LOADED_FOR_STORE);
 
             Garment saved = garmentRepository.save(garment);
 
             saveHistory(
                     saved,
-                    GarmentStatus.SENT_TO_STORE,
+                    GarmentStatus.LOADED_FOR_STORE,
                     "Garment dispatched from HQ back to store"
             );
 
@@ -282,16 +386,21 @@ public class GarmentTrackingServiceImpl implements GarmentTrackingService {
             throw new RuntimeException("No garments found for this order");
         }
 
+        LaundryOrder order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+        order.setStatus(OrderStatus.READY_FOR_DELIVERY);
+        orderRepository.save(order);
+
         List<GarmentResponse> responses = new ArrayList<>();
 
         for (Garment garment : garments) {
-            garment.setStatus(GarmentStatus.RECEIVED_AT_STORE_AFTER_PROCESSING);
+            garment.setStatus(GarmentStatus.DROPPED_AT_STORE);
 
             Garment saved = garmentRepository.save(garment);
 
             saveHistory(
                     saved,
-                    GarmentStatus.RECEIVED_AT_STORE_AFTER_PROCESSING,
+                    GarmentStatus.DROPPED_AT_STORE,
                     "Garment received back at store after HQ processing"
             );
 
@@ -299,5 +408,22 @@ public class GarmentTrackingServiceImpl implements GarmentTrackingService {
         }
 
         return responses;
+    }
+
+    @Override
+    public GarmentResponse reportGarmentMissing(UUID garmentId) {
+        Garment garment = garmentRepository.findById(garmentId)
+                .orElseThrow(() -> new RuntimeException("Garment not found"));
+
+        garment.setStatus(GarmentStatus.REPORTED_MISSING);
+        Garment saved = garmentRepository.save(garment);
+
+        saveHistory(
+                saved,
+                GarmentStatus.REPORTED_MISSING,
+                "Garment reported missing"
+        );
+
+        return map(saved);
     }
 }

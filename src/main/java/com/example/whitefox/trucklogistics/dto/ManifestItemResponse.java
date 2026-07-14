@@ -14,11 +14,11 @@ public class ManifestItemResponse {
 
     private UUID manifestId;
 
-    private UUID garmentId;
+    private UUID bagId;
 
-    private String itemName;
+    private String bagQrCode;
 
-    private String serviceType;
+    private int totalGarmentsInBag;
 
     private String qrCode;
 

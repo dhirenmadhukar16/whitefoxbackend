@@ -17,7 +17,7 @@ public interface GarmentTrackingService {
     List<GarmentResponse> getGarmentsByOrder(
             UUID orderId
     );
-    List<GarmentResponse> generateGarmentsFromOrder(UUID orderId);
+    List<GarmentResponse> generateGarmentsFromOrder(UUID orderId, com.example.whitefox.tracking.dto.GenerateGarmentsRequest request);
 
     GarmentResponse updateStatus(
             UUID garmentId,
@@ -32,8 +32,17 @@ public interface GarmentTrackingService {
     GarmentResponse scanQr(
             String qrCode
     );
+    GarmentResponse scanAction(String qrCode, String role);
+    List<GarmentResponse> getGarmentsByStatus(String status);
+    List<GarmentResponse> getAllHqGarments();
     List<GarmentResponse> sendOrderGarmentsToHq(UUID orderId);
     List<GarmentResponse> receiveOrderGarmentsAtHq(UUID orderId);
     List<GarmentResponse> sendOrderGarmentsBackToStore(UUID orderId);
-    List<GarmentResponse> receiveOrderGarmentsBackAtStore(UUID orderId);
+    List<GarmentResponse> receiveOrderGarmentsBackAtStore(
+            UUID orderId
+    );
+
+    GarmentResponse reportGarmentMissing(
+            UUID garmentId
+    );
 }

@@ -56,17 +56,48 @@ public class GarmentTrackingController {
                 request
         );
     }
+
+    @PostMapping("/garments/{garmentId}/report-missing")
+    public GarmentResponse reportGarmentMissing(
+            @PathVariable UUID garmentId
+    ) {
+        return garmentTrackingService.reportGarmentMissing(garmentId);
+    }
+
     @PostMapping("/orders/{orderId}/generate-garments")
     public List<GarmentResponse> generateGarmentsFromOrder(
-            @PathVariable UUID orderId
+            @PathVariable UUID orderId,
+            @RequestBody com.example.whitefox.tracking.dto.GenerateGarmentsRequest request
     ) {
-        return garmentTrackingService.generateGarmentsFromOrder(orderId);
+        return garmentTrackingService.generateGarmentsFromOrder(orderId, request);
     }
     @GetMapping("/scan/{qrCode}")
     public GarmentResponse scanQr(
             @PathVariable String qrCode
     ) {
         return garmentTrackingService.scanQr(qrCode);
+    }
+    @PatchMapping("/scan-action/{qrCode}")
+    public GarmentResponse scanAction(
+            @PathVariable String qrCode,
+            @RequestParam String role
+    ) {
+        return garmentTrackingService.scanAction(qrCode, role);
+    }
+
+    @GetMapping("/garments")
+    public List<GarmentResponse> getGarmentsByStatus(
+            @RequestParam(required = false) String status
+    ) {
+        if (status != null && !status.isEmpty()) {
+            return garmentTrackingService.getGarmentsByStatus(status);
+        }
+        return garmentTrackingService.getAllHqGarments();
+    }
+
+    @GetMapping("/hq/garments")
+    public List<GarmentResponse> getAllHqGarments() {
+        return garmentTrackingService.getAllHqGarments();
     }
     @PatchMapping("/orders/{orderId}/send-to-hq")
     public List<GarmentResponse> sendOrderGarmentsToHq(

@@ -7,7 +7,7 @@ import java.util.UUID;
 @Data
 public class AddManifestItemRequest {
 
-    private UUID garmentId;
+    private UUID bagId;
     private UUID destinationStoreId;
     private String qrCode;
 }

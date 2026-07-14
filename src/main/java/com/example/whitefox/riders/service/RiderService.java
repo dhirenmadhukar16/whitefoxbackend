@@ -18,6 +18,7 @@ public interface RiderService {
 
 
     RiderResponse getRider(UUID id);
+    RiderResponse getMe(String email);
 
     RiderResponse updateRider(UUID id, CreateRiderRequest request);
 

@@ -6,6 +6,11 @@ import com.example.whitefox.trucklogistics.dto.*;
 import com.example.whitefox.trucklogistics.service.TruckLogisticsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import com.example.whitefox.trucklogistics.repository.TruckRepository;
+import com.example.whitefox.trucklogistics.entity.Truck;
+import com.example.whitefox.common.exceptions.ResourceNotFoundException;
 
 import java.util.List;
 import java.util.UUID;
@@ -17,6 +22,20 @@ public class TruckLogisticsController {
 
     private final TruckLogisticsService truckLogisticsService;
     private final AdminPanelService adminPanelService;
+    private final TruckRepository truckRepository;
+
+    @GetMapping("/me")
+    public TruckResponse getMe() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        
+        Truck truck = truckRepository.findAll().stream()
+                .filter(t -> email.equals(t.getEmail()))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Truck Driver not found"));
+                
+        return truckLogisticsService.getTruck(truck.getId());
+    }
 
 
     @PostMapping("/trucks")

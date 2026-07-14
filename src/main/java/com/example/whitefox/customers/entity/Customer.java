@@ -38,9 +38,13 @@ public class Customer {
 
     private Boolean active;
 
+    @Builder.Default
+    private Integer loyaltyPoints = 0;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
 
     @PrePersist
     public void prePersist() {

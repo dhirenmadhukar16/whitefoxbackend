@@ -1,11 +1,15 @@
 package com.example.whitefox.storeops.controller;
 
 
+import com.example.whitefox.auth.repository.UserRepository;
+import com.example.whitefox.store.dto.StoreResponse;
+import com.example.whitefox.store.service.StoreService;
 import com.example.whitefox.storeops.dto.*;
 import com.example.whitefox.storeops.service.StoreOperationsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 import java.util.UUID;
 
@@ -15,6 +19,24 @@ import java.util.UUID;
 public class StoreOperationsController {
 
     private final StoreOperationsService storeOperationsService;
+    private final com.example.whitefox.tracking.service.BagService bagService;
+    private final StoreService storeService;
+    private final UserRepository userRepository;
+
+    @PostMapping("/bags/pack")
+    public com.example.whitefox.tracking.dto.BagResponse packBag(
+            @RequestBody com.example.whitefox.tracking.dto.CreateBagRequest request) {
+        
+        return bagService.createBag(request);
+    }
+
+    @PostMapping("/bags/receive")
+    public com.example.whitefox.tracking.dto.BagResponse receiveBag(
+            @RequestParam String qrCode) {
+        
+        com.example.whitefox.tracking.dto.BagResponse bag = bagService.getBagByQrCode(qrCode);
+        return bagService.updateBagStatus(bag.getId(), "UNPACKED_AT_STORE");
+    }
 
     @GetMapping("/stores/{storeId}/dashboard")
     public StoreDashboardResponse getDashboard(
@@ -85,5 +107,22 @@ public class StoreOperationsController {
             @RequestBody SetStorePricingRequest request
     ) {
         return storeOperationsService.setStorePricing(storeId, request);
+    }
+
+    /**
+     * Returns the current logged-in user's store details.
+     * Uses the JWT principal to look up the user, then fetches their storeId.
+     */
+    @GetMapping("/my-store")
+    public StoreResponse getMyStore(Principal principal) {
+        if (principal == null) {
+            throw new RuntimeException("Not authenticated");
+        }
+        var user = userRepository.findByEmail(principal.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (user.getStoreId() == null) {
+            throw new RuntimeException("No store linked to this user account");
+        }
+        return storeService.getStore(user.getStoreId());
     }
 }

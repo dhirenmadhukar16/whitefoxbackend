@@ -17,6 +17,8 @@ public class TruckResponse {
     private String driverName;
 
     private String driverPhone;
+    
+    private String email;
 
     private Double capacityKg;
 

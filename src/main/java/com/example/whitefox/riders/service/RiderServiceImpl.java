@@ -128,6 +128,13 @@ public class RiderServiceImpl implements RiderService {
         riderRepository.save(rider);
     }
 
+    @Override
+    public RiderResponse getMe(String email) {
+        Rider rider = riderRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Rider not found for email: " + email));
+        return map(rider);
+    }
+
     private RiderResponse map(Rider rider) {
         return RiderResponse.builder()
                 .id(rider.getId())

@@ -18,6 +18,8 @@ import com.example.whitefox.storeemployee.repository.StoreEmployeeRepository;
 import com.example.whitefox.storeops.dto.*;
 import com.example.whitefox.tracking.entity.Garment;
 import com.example.whitefox.tracking.repository.GarmentRepository;
+import com.example.whitefox.customers.repository.CustomerRepository;
+import com.example.whitefox.customers.entity.Customer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -43,6 +45,7 @@ public class StoreOperationsServiceImpl implements StoreOperationsService {
     private final CustomerUpdateService customerUpdateService;
     private final StoreServicePricingRepository pricingRepository;
     private final ServiceCatalogRepository serviceCatalogRepository;
+    private final CustomerRepository customerRepository;
 
     @Override
     public StoreDashboardResponse getDashboard(UUID storeId) {
@@ -182,6 +185,15 @@ public class StoreOperationsServiceImpl implements StoreOperationsService {
     public StoreOrderSummaryResponse markDelivered(UUID orderId) {
         LaundryOrder order = getOrder(orderId);
         order.setStatus(OrderStatus.DELIVERED);
+
+        if (order.getCustomer() != null && order.getTotalAmount() != null) {
+            Customer customer = order.getCustomer();
+            int pointsToAdd = (int) (order.getTotalAmount() / 10);
+            customer.setLoyaltyPoints(
+                    (customer.getLoyaltyPoints() != null ? customer.getLoyaltyPoints() : 0) + pointsToAdd
+            );
+            customerRepository.save(customer);
+        }
 
         LaundryOrder saved = orderRepository.save(order);
 

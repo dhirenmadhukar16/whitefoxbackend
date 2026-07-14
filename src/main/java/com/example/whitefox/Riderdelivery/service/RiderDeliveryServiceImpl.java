@@ -12,6 +12,8 @@ import com.example.whitefox.orders.repository.LaundryOrderRepository;
 import com.example.whitefox.orders.repository.OrderItemRepository;
 import com.example.whitefox.riders.entity.Rider;
 import com.example.whitefox.riders.repository.RiderRepository;
+import com.example.whitefox.customers.repository.CustomerRepository;
+import com.example.whitefox.customers.entity.Customer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +28,7 @@ public class RiderDeliveryServiceImpl implements RiderDeliveryService {
     private final OrderItemRepository orderItemRepository;
     private final RiderRepository riderRepository;
     private final CustomerUpdateService customerUpdateService;
+    private final CustomerRepository customerRepository;
 
     @Override
     public List<OrderResponse> getDeliveryOrders(UUID riderId) {
@@ -80,6 +83,15 @@ public class RiderDeliveryServiceImpl implements RiderDeliveryService {
         LaundryOrder order = getOrder(orderId);
 
         order.setStatus(OrderStatus.DELIVERED);
+
+        if (order.getCustomer() != null && order.getTotalAmount() != null) {
+            Customer customer = order.getCustomer();
+            int pointsToAdd = (int) (order.getTotalAmount() / 10);
+            customer.setLoyaltyPoints(
+                    (customer.getLoyaltyPoints() != null ? customer.getLoyaltyPoints() : 0) + pointsToAdd
+            );
+            customerRepository.save(customer);
+        }
 
         LaundryOrder saved = orderRepository.save(order);
 

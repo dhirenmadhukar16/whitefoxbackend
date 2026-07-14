@@ -1,8 +1,7 @@
 package com.example.whitefox.tracking.repository;
 
-
-
 import com.example.whitefox.tracking.entity.Garment;
+import com.example.whitefox.tracking.enums.GarmentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -17,4 +16,8 @@ public interface GarmentRepository
     Optional<Garment> findByStoreQrCode(String storeQrCode);
 
     Optional<Garment> findByOutingQrCode(String outingQrCode);
+
+    List<Garment> findByStatus(GarmentStatus status);
+
+    List<Garment> findByStatusIn(List<GarmentStatus> statuses);
 }

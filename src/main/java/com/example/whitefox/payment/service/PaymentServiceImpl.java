@@ -41,6 +41,17 @@ public class PaymentServiceImpl implements PaymentService {
 
             int amountInPaise = (int) Math.round(request.getAmount() * 100);
 
+            if ("YOUR_KEY_ID".equals(razorpayKeyId)) {
+                return RazorpayCreateOrderResponse.builder()
+                        .orderId(order.getId())
+                        .razorpayOrderId("order_dummy_" + System.currentTimeMillis())
+                        .keyId(razorpayKeyId)
+                        .amount(request.getAmount())
+                        .amountInPaise(amountInPaise)
+                        .currency("INR")
+                        .build();
+            }
+
             RazorpayClient razorpayClient =
                     new RazorpayClient(razorpayKeyId, razorpayKeySecret);
 

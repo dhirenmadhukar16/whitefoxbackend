@@ -2,15 +2,20 @@ package com.example.whitefox.trucklogistics.service;
 
 import com.example.whitefox.store.entity.Store;
 import com.example.whitefox.store.repository.StoreRepository;
+import com.example.whitefox.tracking.entity.Bag;
 import com.example.whitefox.tracking.entity.Garment;
 import com.example.whitefox.tracking.enums.GarmentStatus;
 import com.example.whitefox.tracking.repository.GarmentRepository;
+import com.example.whitefox.tracking.repository.BagRepository;
 import com.example.whitefox.trucklogistics.dto.*;
 import com.example.whitefox.trucklogistics.entity.*;
 import com.example.whitefox.trucklogistics.enums.TruckManifestStatus;
 import com.example.whitefox.trucklogistics.enums.TruckStatus;
 import com.example.whitefox.trucklogistics.enums.TruckTripStatus;
 import com.example.whitefox.trucklogistics.repository.*;
+import com.example.whitefox.auth.entity.User;
+import com.example.whitefox.auth.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -30,13 +35,37 @@ public class TruckLogisticsServiceImpl implements TruckLogisticsService {
     private final TruckLocationLogRepository locationLogRepository;
     private final StoreRepository storeRepository;
     private final GarmentRepository garmentRepository;
+    private final BagRepository bagRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public TruckResponse createTruck(CreateTruckRequest request) {
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new RuntimeException("Email already exists");
+        }
+        
+        String plainPassword = request.getPassword();
+        if (plainPassword == null || plainPassword.trim().isEmpty()) {
+            plainPassword = "password123";
+        }
+        
+        User user = User.builder()
+                .firstName(request.getDriverName())
+                .lastName("Driver")
+                .email(request.getEmail())
+                .phone(request.getDriverPhone())
+                .password(passwordEncoder.encode(plainPassword))
+                .role("TRUCK_DRIVER")
+                .active(true)
+                .build();
+        userRepository.save(user);
+
         Truck truck = Truck.builder()
                 .truckNumber(request.getTruckNumber())
                 .driverName(request.getDriverName())
                 .driverPhone(request.getDriverPhone())
+                .email(request.getEmail())
                 .capacityKg(request.getCapacityKg())
                 .status(TruckStatus.AVAILABLE)
                 .active(true)
@@ -270,10 +299,10 @@ public class TruckLogisticsServiceImpl implements TruckLogisticsService {
     public ManifestResponse addManifestItem(UUID manifestId, AddManifestItemRequest request) {
         TruckManifest manifest = getManifestEntity(manifestId);
 
-        Garment garment = null;
-        if (request.getGarmentId() != null) {
-            garment = garmentRepository.findById(request.getGarmentId())
-                    .orElseThrow(() -> new RuntimeException("Garment not found"));
+        Bag bag = null;
+        if (request.getBagId() != null) {
+            bag = bagRepository.findById(request.getBagId())
+                    .orElseThrow(() -> new RuntimeException("Bag not found"));
         }
 
         Store destinationStore = null;
@@ -284,7 +313,7 @@ public class TruckLogisticsServiceImpl implements TruckLogisticsService {
 
         TruckManifestItem item = TruckManifestItem.builder()
                 .manifest(manifest)
-                .garment(garment)
+                .bag(bag)
                 .destinationStore(destinationStore)
                 .qrCode(request.getQrCode())
                 .status("LOADED")
@@ -293,16 +322,16 @@ public class TruckLogisticsServiceImpl implements TruckLogisticsService {
 
         manifestItemRepository.save(item);
 
-        if (garment != null) {
+        if (bag != null) {
             if ("STORE_TO_HQ".equalsIgnoreCase(manifest.getMovementType())) {
-                garment.setStatus(GarmentStatus.LOADED_ON_TRUCK);
+                bag.setStatus("IN_TRANSIT_TO_HQ");
             }
 
             if ("HQ_TO_STORE".equalsIgnoreCase(manifest.getMovementType())) {
-                garment.setStatus(GarmentStatus.LOADED_FOR_STORE);
+                bag.setStatus("IN_TRANSIT_TO_STORE");
             }
 
-            garmentRepository.save(garment);
+            bagRepository.save(bag);
         }
 
         manifest.setTotalGarments(manifestItemRepository.findByManifestId(manifestId).size());
@@ -328,9 +357,9 @@ public class TruckLogisticsServiceImpl implements TruckLogisticsService {
             item.setStatus("DELIVERED");
             item.setDeliveredAt(LocalDateTime.now());
 
-            if (item.getGarment() != null) {
-                item.getGarment().setStatus(GarmentStatus.RECEIVED_AT_HQ);
-                garmentRepository.save(item.getGarment());
+            if (item.getBag() != null) {
+                item.getBag().setStatus("RECEIVED_AT_HQ");
+                bagRepository.save(item.getBag());
             }
 
             manifestItemRepository.save(item);
@@ -351,9 +380,9 @@ public class TruckLogisticsServiceImpl implements TruckLogisticsService {
             item.setStatus("DELIVERED");
             item.setDeliveredAt(LocalDateTime.now());
 
-            if (item.getGarment() != null) {
-                item.getGarment().setStatus(GarmentStatus.RECEIVED_AT_STORE_AFTER_PROCESSING);
-                garmentRepository.save(item.getGarment());
+            if (item.getBag() != null) {
+                item.getBag().setStatus("UNPACKED_AT_STORE");
+                bagRepository.save(item.getBag());
             }
 
             manifestItemRepository.save(item);
@@ -375,9 +404,9 @@ public class TruckLogisticsServiceImpl implements TruckLogisticsService {
                     item.setStatus("DELIVERED");
                     item.setDeliveredAt(LocalDateTime.now());
 
-                    if (item.getGarment() != null) {
-                        item.getGarment().setStatus(GarmentStatus.RECEIVED_AT_STORE_AFTER_PROCESSING);
-                        garmentRepository.save(item.getGarment());
+                    if (item.getBag() != null) {
+                        item.getBag().setStatus("UNPACKED_AT_STORE");
+                        bagRepository.save(item.getBag());
                     }
 
                     manifestItemRepository.save(item);
@@ -421,6 +450,7 @@ public class TruckLogisticsServiceImpl implements TruckLogisticsService {
                 .truckNumber(truck.getTruckNumber())
                 .driverName(truck.getDriverName())
                 .driverPhone(truck.getDriverPhone())
+                .email(truck.getEmail())
                 .capacityKg(truck.getCapacityKg())
                 .currentLatitude(truck.getCurrentLatitude())
                 .currentLongitude(truck.getCurrentLongitude())
@@ -512,9 +542,9 @@ public class TruckLogisticsServiceImpl implements TruckLogisticsService {
         return ManifestItemResponse.builder()
                 .id(item.getId())
                 .manifestId(item.getManifest().getId())
-                .garmentId(item.getGarment() != null ? item.getGarment().getId() : null)
-                .itemName(item.getGarment() != null ? item.getGarment().getItemName() : null)
-                .serviceType(item.getGarment() != null ? item.getGarment().getServiceType() : null)
+                .bagId(item.getBag() != null ? item.getBag().getId() : null)
+                .bagQrCode(item.getBag() != null ? item.getBag().getQrCode() : null)
+                .totalGarmentsInBag(item.getBag() != null && item.getBag().getGarments() != null ? item.getBag().getGarments().size() : 0)
                 .qrCode(item.getQrCode())
                 .destinationStoreId(item.getDestinationStore() != null ? item.getDestinationStore().getId() : null)
                 .destinationStoreName(item.getDestinationStore() != null ? item.getDestinationStore().getName() : null)

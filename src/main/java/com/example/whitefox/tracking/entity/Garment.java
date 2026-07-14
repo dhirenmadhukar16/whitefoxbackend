@@ -39,12 +39,21 @@ public class Garment {
 
     private String color;
 
-    private String conditionNote;
+    private String stains;
 
-    private String photoUrl;
+    private String specialInstructions;
+
+    @ElementCollection
+    @CollectionTable(name = "garment_photos", joinColumns = @JoinColumn(name = "garment_id"))
+    @Column(name = "photo_url")
+    private java.util.List<String> photoUrls;
 
     @Enumerated(EnumType.STRING)
     private GarmentStatus status;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "current_bag_id")
+    private Bag currentBag;
 
     private LocalDateTime createdAt;
 

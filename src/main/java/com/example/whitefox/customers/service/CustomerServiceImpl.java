@@ -108,6 +108,7 @@ public class CustomerServiceImpl
                 .address(customer.getAddress())
                 .city(customer.getCity())
                 .active(customer.getActive())
+                .loyaltyPoints(customer.getLoyaltyPoints() != null ? customer.getLoyaltyPoints() : 0)
                 .build();
     }
     @Override

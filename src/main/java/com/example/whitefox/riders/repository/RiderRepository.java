@@ -13,6 +13,7 @@ import java.util.UUID;
 public interface RiderRepository extends JpaRepository<Rider, UUID> {
 
     Optional<Rider> findByPhone(String phone);
+    Optional<Rider> findByEmail(String email);
 
     List<Rider> findByStatusAndActiveTrue(RiderStatus status);
 }

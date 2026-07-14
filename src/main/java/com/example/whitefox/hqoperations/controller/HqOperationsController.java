@@ -17,6 +17,22 @@ import java.util.UUID;
 public class HqOperationsController {
 
     private final HqOperationsService hqOperationsService;
+    private final com.example.whitefox.tracking.service.BagService bagService;
+
+    @PostMapping("/bags/receive")
+    public com.example.whitefox.tracking.dto.BagResponse receiveBag(
+            @RequestParam String qrCode) {
+        
+        com.example.whitefox.tracking.dto.BagResponse bag = bagService.getBagByQrCode(qrCode);
+        return bagService.updateBagStatus(bag.getId(), "RECEIVED_AT_HQ");
+    }
+
+    @PostMapping("/bags/dispatch")
+    public com.example.whitefox.tracking.dto.BagResponse dispatchBag(
+            @RequestBody com.example.whitefox.tracking.dto.CreateBagRequest request) {
+        
+        return bagService.createBag(request);
+    }
 
     @PatchMapping("/garments/{garmentId}/remove-old-qr")
     public HqGarmentResponse removeOldQr(

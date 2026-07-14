@@ -10,6 +10,10 @@ public class CreateTruckRequest {
     private String driverName;
 
     private String driverPhone;
+    
+    private String email;
+    
+    private String password;
 
     private Double capacityKg;
 }

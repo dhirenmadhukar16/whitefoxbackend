@@ -32,28 +32,28 @@ public class HqOperationsServiceImpl implements HqOperationsService {
     public HqGarmentResponse removeOldQr(UUID garmentId) {
         Garment garment = getGarment(garmentId);
         garment.setStoreQrCode(null);
-        garment.setStatus(GarmentStatus.OLD_QR_REMOVED);
+        garment.setStatus(GarmentStatus.PROCESSING);
         return map(garmentRepository.save(garment));
     }
 
     @Override
     public HqGarmentResponse startCleaning(UUID garmentId) {
         Garment garment = getGarment(garmentId);
-        garment.setStatus(GarmentStatus.CLEANING_IN_PROGRESS);
+        garment.setStatus(GarmentStatus.PROCESSING);
         return map(garmentRepository.save(garment));
     }
 
     @Override
     public HqGarmentResponse markDelayed(UUID garmentId) {
         Garment garment = getGarment(garmentId);
-        garment.setStatus(GarmentStatus.CLEANING_DELAYED);
+        garment.setStatus(GarmentStatus.PROCESSING);
         return map(garmentRepository.save(garment));
     }
 
     @Override
     public HqGarmentResponse completeCleaning(UUID garmentId) {
         Garment garment = getGarment(garmentId);
-        garment.setStatus(GarmentStatus.CLEANING_COMPLETED);
+        garment.setStatus(GarmentStatus.PROCESSING);
         return map(garmentRepository.save(garment));
     }
 
@@ -64,14 +64,14 @@ public class HqOperationsServiceImpl implements HqOperationsService {
     ) {
         Garment garment = getGarment(garmentId);
         garment.setOutingQrCode(request.getOutingQrCode());
-        garment.setStatus(GarmentStatus.OUTING_QR_ATTACHED);
+        garment.setStatus(GarmentStatus.PROCESSED_QR_REATTACHED);
         return map(garmentRepository.save(garment));
     }
 
     @Override
     public HqGarmentResponse readyForDispatch(UUID garmentId) {
         Garment garment = getGarment(garmentId);
-        garment.setStatus(GarmentStatus.READY_FOR_STORE_DISPATCH);
+        garment.setStatus(GarmentStatus.PROCESSED_QR_REATTACHED);
         return map(garmentRepository.save(garment));
     }
 
@@ -79,7 +79,7 @@ public class HqOperationsServiceImpl implements HqOperationsService {
     public List<HqGarmentResponse> getDelayedGarments() {
         return garmentRepository.findAll()
                 .stream()
-                .filter(g -> g.getStatus() == GarmentStatus.CLEANING_DELAYED)
+                .filter(g -> g.getStatus() == GarmentStatus.PROCESSING)
                 .map(this::map)
                 .toList();
     }
@@ -89,11 +89,7 @@ public class HqOperationsServiceImpl implements HqOperationsService {
         return garmentRepository.findAll()
                 .stream()
                 .filter(g -> g.getOrder().getStore().getId().equals(storeId))
-                .filter(g ->
-                        g.getStatus() == GarmentStatus.OLD_QR_REMOVED ||
-                                g.getStatus() == GarmentStatus.CLEANING_IN_PROGRESS ||
-                                g.getStatus() == GarmentStatus.CLEANING_DELAYED
-                )
+                .filter(g -> g.getStatus() == GarmentStatus.PROCESSING)
                 .map(this::map)
                 .toList();
     }
@@ -148,14 +144,14 @@ public class HqOperationsServiceImpl implements HqOperationsService {
         List<LaundryOrder> orders = orderRepository.findAll();
 
         List<HqGarmentResponse> delayed = garments.stream()
-                .filter(g -> g.getStatus() == GarmentStatus.CLEANING_DELAYED)
+                .filter(g -> g.getStatus() == GarmentStatus.PROCESSING)
                 .map(this::map)
                 .toList();
 
         List<HqGarmentResponse> todayDispatch = getTodayDispatch();
 
         List<HqGarmentResponse> readyDispatch = garments.stream()
-                .filter(g -> g.getStatus() == GarmentStatus.READY_FOR_STORE_DISPATCH)
+                .filter(g -> g.getStatus() == GarmentStatus.PROCESSED_QR_REATTACHED)
                 .map(this::map)
                 .toList();
 
@@ -170,7 +166,7 @@ public class HqOperationsServiceImpl implements HqOperationsService {
                 .delayedGarments((long) delayed.size())
                 .cleaningInProgress(
                         garments.stream()
-                                .filter(g -> g.getStatus() == GarmentStatus.CLEANING_IN_PROGRESS)
+                                .filter(g -> g.getStatus() == GarmentStatus.PROCESSING)
                                 .count()
                 )
                 .readyForDispatch((long) readyDispatch.size())
@@ -203,7 +199,7 @@ public class HqOperationsServiceImpl implements HqOperationsService {
     public List<HqStoreDispatchGroupResponse> getReadyDispatchGroupedByStore() {
         return garmentRepository.findAll()
                 .stream()
-                .filter(g -> g.getStatus() == GarmentStatus.READY_FOR_STORE_DISPATCH)
+                .filter(g -> g.getStatus() == GarmentStatus.PROCESSED_QR_REATTACHED)
                 .collect(Collectors.groupingBy(g -> g.getOrder().getStore()))
                 .entrySet()
                 .stream()

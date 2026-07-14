@@ -59,4 +59,28 @@ public class CustomerReviewController {
     ) {
         return reviewService.getReviewsByRider(riderId);
     }
+
+    @GetMapping("/riders/{riderId}/rating")
+    public java.util.Map<String, Object> getRiderRating(
+            @PathVariable UUID riderId
+    ) {
+        List<CustomerReviewResponse> reviews = reviewService.getReviewsByRider(riderId);
+        if (reviews.isEmpty()) {
+            return java.util.Map.of(
+                    "rating", 0.0,
+                    "totalReviews", 0
+            );
+        }
+        
+        double avg = reviews.stream()
+                .filter(r -> r.getRiderRating() != null)
+                .mapToInt(CustomerReviewResponse::getRiderRating)
+                .average()
+                .orElse(0.0);
+                
+        return java.util.Map.of(
+                "rating", Math.round(avg * 10.0) / 10.0,
+                "totalReviews", reviews.size()
+        );
+    }
 }

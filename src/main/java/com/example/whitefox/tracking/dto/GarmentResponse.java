@@ -17,6 +17,10 @@ public class GarmentResponse {
 
     private UUID orderId;
 
+    private UUID storeId;
+
+    private String storeName;
+
     private String storeQrCode;
 
     private String outingQrCode;
@@ -27,9 +31,17 @@ public class GarmentResponse {
 
     private String color;
 
-    private String conditionNote;
+    private String stains;
 
-    private String photoUrl;
+    private String specialInstructions;
+
+    private List<String> photoUrls;
+
+    private String customerName;
+
+    private String customerPhone;
+
+    private UUID customerId;
 
     private GarmentStatus status;
 

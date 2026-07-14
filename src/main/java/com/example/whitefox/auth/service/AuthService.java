@@ -8,13 +8,19 @@ import com.example.whitefox.auth.repository.UserRepository;
 import com.example.whitefox.common.exceptions.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import com.example.whitefox.customers.repository.CustomerRepository;
+import com.example.whitefox.customers.entity.Customer;
+import com.example.whitefox.trucklogistics.repository.TruckRepository;
 import org.springframework.stereotype.Service;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final CustomerRepository customerRepository;
+    private final TruckRepository truckRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
 
@@ -32,20 +38,34 @@ public class AuthService {
                 request.getPassword(),
                 user.getPassword()
         )) {
-            throw new RuntimeException("Invalid credentials");
+            throw new org.springframework.security.authentication.BadCredentialsException("Invalid credentials");
         }
         String token = jwtService.generateToken(
                 user.getEmail(),
                 user.getRole()
         );
 
+        UUID resolvedUserId = user.getId();
+        if ("CUSTOMER".equals(user.getRole())) {
+            var customerOpt = customerRepository.findByEmail(user.getEmail());
+            if (customerOpt.isPresent()) {
+                resolvedUserId = customerOpt.get().getId();
+            }
+        } else if ("TRUCK_DRIVER".equals(user.getRole())) {
+            var truckOpt = truckRepository.findAll().stream()
+                .filter(t -> user.getEmail().equals(t.getEmail()))
+                .findFirst();
+            if (truckOpt.isPresent()) {
+                resolvedUserId = truckOpt.get().getId();
+            }
+        }
 
         return LoginResponse.builder()
                 .token(token)
                 .email(user.getEmail())
                 .role(user.getRole())
                 .storeId(user.getStoreId())
-                .userId(user.getId())
+                .userId(resolvedUserId)
                 .build();
     }
 
@@ -72,11 +92,20 @@ public class AuthService {
                                 request.getPassword()
                         )
                 )
-                .role("USER")
+                .role("CUSTOMER")
                 .active(true)
                 .build();
 
         userRepository.save(user);
+
+        Customer customer = Customer.builder()
+                .customerCode("CUST-" + System.currentTimeMillis())
+                .name(request.getFirstName() + " " + request.getLastName())
+                .phone(request.getPhone())
+                .email(request.getEmail())
+                .build();
+        customerRepository.save(customer);
+
         String token = jwtService.generateToken(
                 user.getEmail(),
                 user.getRole()
@@ -87,6 +116,7 @@ public class AuthService {
                 .token(token)
                 .email(user.getEmail())
                 .role(user.getRole())
+                .userId(customer.getId())
                 .build();
     }
 }

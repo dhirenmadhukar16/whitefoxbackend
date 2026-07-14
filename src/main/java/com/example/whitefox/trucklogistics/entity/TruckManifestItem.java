@@ -1,7 +1,7 @@
 package com.example.whitefox.trucklogistics.entity;
 
 import com.example.whitefox.store.entity.Store;
-import com.example.whitefox.tracking.entity.Garment;
+import com.example.whitefox.tracking.entity.Bag;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -26,8 +26,8 @@ public class TruckManifestItem {
     private TruckManifest manifest;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "garment_id")
-    private Garment garment;
+    @JoinColumn(name = "bag_id")
+    private Bag bag;
 
     private String qrCode;
 

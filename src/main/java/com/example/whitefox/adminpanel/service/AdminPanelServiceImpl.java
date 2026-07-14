@@ -737,16 +737,17 @@ public class AdminPanelServiceImpl implements AdminPanelService {
     public List<AdminOrderResponse> getAllOrdersForAdmin() {
         return orderRepository.findAll()
                 .stream()
+                .filter(order -> order.getCustomer() != null && order.getStore() != null)
                 .map(order -> AdminOrderResponse.builder()
                         .orderId(order.getId())
                         .orderNumber(order.getOrderNumber())
 
                         .customerId(order.getCustomer().getId())
-                        .customerName(order.getCustomer().getName())
-                        .customerPhone(order.getCustomer().getPhone())
+                        .customerName(order.getCustomer().getName() != null ? order.getCustomer().getName() : "Unknown")
+                        .customerPhone(order.getCustomer().getPhone() != null ? order.getCustomer().getPhone() : "")
 
                         .storeId(order.getStore().getId())
-                        .storeName(order.getStore().getName())
+                        .storeName(order.getStore().getName() != null ? order.getStore().getName() : "Unknown Store")
 
                         .deliveryRiderId(
                                 order.getDeliveryRider() != null
@@ -761,12 +762,13 @@ public class AdminPanelServiceImpl implements AdminPanelService {
 
                         .status(order.getStatus())
                         .paymentStatus(order.getPaymentStatus())
-                        .subtotal(order.getSubtotal())
-                        .gst(order.getGst())
-                        .totalAmount(order.getTotalAmount())
+                        .subtotal(order.getSubtotal() != null ? order.getSubtotal() : 0.0)
+                        .gst(order.getGst() != null ? order.getGst() : 0.0)
+                        .totalAmount(order.getTotalAmount() != null ? order.getTotalAmount() : 0.0)
                         .build())
                 .toList();
     }
+
     @Override
     public List<AdminRiderStatsResponse> getRiderStats() {
 
