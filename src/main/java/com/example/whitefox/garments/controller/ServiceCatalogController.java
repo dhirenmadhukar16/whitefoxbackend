@@ -4,6 +4,7 @@ package com.example.whitefox.garments.controller;
 
 import com.example.whitefox.garments.dto.CreateServiceCatalogRequest;
 import com.example.whitefox.garments.dto.ServiceCatalogResponse;
+import com.example.whitefox.garments.dto.ServiceCategoryResponse;
 import com.example.whitefox.garments.service.ServiceCatalogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +19,17 @@ import java.util.UUID;
 public class ServiceCatalogController {
 
     private final ServiceCatalogService service;
+
+    @PostMapping("/categories")
+    public ServiceCategoryResponse createCategory(
+            @RequestBody com.example.whitefox.garments.dto.CreateServiceCategoryRequest request) {
+        return service.createCategory(request);
+    }
+
+    @GetMapping("/categories")
+    public List<ServiceCategoryResponse> getAllCategories() {
+        return service.getAllCategories();
+    }
 
     @PostMapping
     public ServiceCatalogResponse create(
@@ -54,6 +66,13 @@ public class ServiceCatalogController {
 
         service.deactivate(id);
 
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(
+            @PathVariable UUID id) {
+        service.delete(id);
         return ResponseEntity.noContent().build();
     }
 }

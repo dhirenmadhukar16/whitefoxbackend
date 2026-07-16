@@ -21,12 +21,14 @@ public interface PaymentService {
     );
 
     PaymentSummaryResponse getPaymentSummary();
-    RazorpayCreateOrderResponse createRazorpayOrder(
-            RazorpayCreateOrderRequest request
-    );
 
-    PaymentResponse verifyRazorpayPayment(
-            RazorpayVerifyPaymentRequest request
-    );
+    RazorpayCreateOrderResponse createRazorpayOrder(RazorpayCreateOrderRequest request);
+
+    PaymentResponse verifyRazorpayPayment(RazorpayVerifyPaymentRequest request);
+
+    RazorpayCreateOrderResponse createRazorpayBookingOrder(RazorpayCreateBookingOrderRequest request);
+
+    com.example.whitefox.customerbooking.dto.CustomerBookingResponse verifyRazorpayBookingPayment(RazorpayVerifyBookingPaymentRequest request);
+
     void markCodPending(UUID orderId);
 }

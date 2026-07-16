@@ -5,7 +5,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Entity
+@Entity(name = "AdminStoreExpense")
 @Table(name = "store_expenses")
 @Getter
 @Setter
@@ -17,6 +17,7 @@ public class StoreExpense {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(name = "store_id")
     private UUID storeId;
 
     private String category; // RENT, ELECTRICITY, SALARY, OTHER

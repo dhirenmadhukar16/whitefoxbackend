@@ -22,5 +22,7 @@ public class RiderResponse {
     private Double longitude;
     private RiderStatus status;
     private Boolean active;
+    private String whatsappNumber;
+    private UUID storeId;
     private String generatedPassword;
 }

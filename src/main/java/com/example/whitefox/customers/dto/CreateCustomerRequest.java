@@ -10,9 +10,8 @@ public class CreateCustomerRequest {
     private String name;
 
     private String phone;
-
     private String email;
-
+    private String whatsappNumber;
     private String address;
 
     private String city;

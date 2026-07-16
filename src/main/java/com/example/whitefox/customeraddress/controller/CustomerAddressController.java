@@ -25,7 +25,7 @@ public class CustomerAddressController {
         return addressService.createAddress(request);
     }
 
-    @GetMapping("/customers/{customerId}")
+    @GetMapping("/customer/{customerId}")
     public List<CustomerAddressResponse> getAddressesByCustomer(
             @PathVariable UUID customerId
     ) {

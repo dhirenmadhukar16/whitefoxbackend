@@ -24,6 +24,7 @@ import com.example.whitefox.orders.entity.LaundryOrder;
 import com.example.whitefox.orders.enums.OrderStatus;
 import com.example.whitefox.realtime.dto.RealtimeEvent;
 import com.example.whitefox.realtime.service.RealtimeEventService;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 
@@ -60,7 +61,10 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
                 .pickupDate(request.getPickupDate())
                 .pickupTimeSlot(request.getPickupTimeSlot())
                 .specialInstructions(request.getSpecialInstructions())
-                .status(CustomerBookingStatus.REQUESTED)
+                .deliveryType(request.getDeliveryType())
+                .paymentMode(request.getPaymentMode())
+                .amountPaid(request.getAmountPaid())
+                .status(store != null ? CustomerBookingStatus.STORE_ASSIGNED : CustomerBookingStatus.REQUESTED)
                 .build();
 
         CustomerBooking savedBooking = bookingRepository.save(booking);
@@ -77,7 +81,7 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
             CustomerBookingItem item = CustomerBookingItem.builder()
                     .booking(savedBooking)
                     .serviceCatalog(catalog)
-                    .serviceType(catalog.getServiceType())
+                    .serviceType(catalog.getCategory() != null ? catalog.getCategory().getName() : null)
                     .itemName(catalog.getItemName())
                     .quantity(itemRequest.getQuantity())
                     .unitPrice(catalog.getPrice())
@@ -382,6 +386,24 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
         return map(saved);
     }
 
+    @Override
+    @Transactional
+    public CustomerBookingResponse rejectStoreAssignment(UUID bookingId, RejectBookingRequest request) {
+        CustomerBooking booking = getBookingEntity(bookingId);
+
+        if (booking.getStatus() != CustomerBookingStatus.STORE_ASSIGNED) {
+            throw new RuntimeException("Only store assigned bookings can be rejected by store");
+        }
+
+        booking.setStore(null);
+        booking.setStatus(CustomerBookingStatus.REQUESTED);
+        booking.setRejectionReason(request.getReason());
+
+        CustomerBooking saved = bookingRepository.save(booking);
+
+        return map(saved);
+    }
+
     private CustomerBooking getBookingEntity(UUID bookingId) {
         return bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Customer booking not found"));
@@ -427,6 +449,7 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
                 .id(booking.getId())
                 .customerId(booking.getCustomer().getId())
                 .customerName(booking.getCustomer().getName())
+                .customerPhone(booking.getCustomer().getPhone())
 
                 .storeId(booking.getStore() != null ? booking.getStore().getId() : null)
                 .storeName(booking.getStore() != null ? booking.getStore().getName() : null)
@@ -448,6 +471,10 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
                 .specialInstructions(booking.getSpecialInstructions())
                 .estimatedAmount(booking.getEstimatedAmount())
                 .status(booking.getStatus())
+                .rejectionReason(booking.getRejectionReason())
+                .deliveryType(booking.getDeliveryType())
+                .paymentMode(booking.getPaymentMode())
+                .amountPaid(booking.getAmountPaid())
                 .items(items)
                 .build();
     }

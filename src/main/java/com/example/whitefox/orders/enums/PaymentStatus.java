@@ -4,12 +4,14 @@ public enum PaymentStatus {
 
     UNPAID,
     PARTIAL,
+    PENDING,
 
     COD_PENDING,
 
     ADVANCE_PAID,
 
     PAID,
-
-    REFUNDED
+    FAILED,
+    REFUNDED,
+    CASH_WITH_RIDER
 }

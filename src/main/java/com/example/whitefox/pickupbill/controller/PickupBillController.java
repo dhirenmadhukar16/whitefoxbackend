@@ -51,6 +51,14 @@ public class PickupBillController {
         return pickupBillService.verifyPickupBill(id);
     }
 
+    @PatchMapping("/{id}/reject")
+    public PickupBillResponse rejectPickupBill(
+            @PathVariable UUID id,
+            @RequestBody com.example.whitefox.pickupbill.dto.RejectPickupBillRequest request
+    ) {
+        return pickupBillService.rejectPickupBill(id, request);
+    }
+
     @PatchMapping("/{id}/collect-clothes")
     public PickupBillResponse collectClothes(
             @PathVariable UUID id

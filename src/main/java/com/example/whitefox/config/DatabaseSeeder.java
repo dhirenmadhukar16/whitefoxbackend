@@ -6,6 +6,8 @@ import com.example.whitefox.customers.entity.Customer;
 import com.example.whitefox.customers.repository.CustomerRepository;
 import com.example.whitefox.garments.entity.ServiceCatalog;
 import com.example.whitefox.garments.repository.ServiceCatalogRepository;
+import com.example.whitefox.garments.repository.ServiceCategoryRepository;
+import com.example.whitefox.garments.entity.ServiceCategory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,24 +21,49 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final CustomerRepository customerRepository;
     private final ServiceCatalogRepository serviceCatalogRepository;
+    private final ServiceCategoryRepository serviceCategoryRepository;
 
     @Override
     public void run(String... args) throws Exception {
+
+        // --- CLEANUP DUPLICATE DOWNTOWN USERS ---
+        var allUsers = userRepository.findAll();
+        long count = 0;
+        for (User u : allUsers) {
+            if ("downtown@whitefox.com".equals(u.getEmail())) {
+                count++;
+                if (count > 1) {
+                    userRepository.delete(u);
+                    System.out.println("DELETED DUPLICATE USER: " + u.getEmail());
+                }
+            }
+        }
+
 
         // ─────────────────────────────────────────────────────────
         // SERVICE CATALOG  (needed for orders to work)
         // ─────────────────────────────────────────────────────────
         if (serviceCatalogRepository.count() == 0) {
-            serviceCatalogRepository.save(ServiceCatalog.builder().serviceType("Wash & Iron").itemName("Shirt").price(50.0).build());
-            serviceCatalogRepository.save(ServiceCatalog.builder().serviceType("Wash & Iron").itemName("T-Shirt").price(40.0).build());
-            serviceCatalogRepository.save(ServiceCatalog.builder().serviceType("Wash & Iron").itemName("Trousers").price(60.0).build());
-            serviceCatalogRepository.save(ServiceCatalog.builder().serviceType("Wash & Iron").itemName("Jeans").price(70.0).build());
-            serviceCatalogRepository.save(ServiceCatalog.builder().serviceType("Dry Clean").itemName("Blazer").price(200.0).build());
-            serviceCatalogRepository.save(ServiceCatalog.builder().serviceType("Dry Clean").itemName("Jacket").price(250.0).build());
-            serviceCatalogRepository.save(ServiceCatalog.builder().serviceType("Dry Clean").itemName("Coat").price(300.0).build());
-            serviceCatalogRepository.save(ServiceCatalog.builder().serviceType("Ironing").itemName("Shirt").price(20.0).build());
-            serviceCatalogRepository.save(ServiceCatalog.builder().serviceType("Ironing").itemName("Trousers").price(25.0).build());
-            serviceCatalogRepository.save(ServiceCatalog.builder().serviceType("Ironing").itemName("T-Shirt").price(15.0).build());
+            ServiceCategory cat1 = new ServiceCategory();
+            cat1.setName("Men's Wear");
+            cat1.setActive(true);
+            cat1 = serviceCategoryRepository.save(cat1);
+            
+            ServiceCategory cat2 = new ServiceCategory();
+            cat2.setName("Women's Wear");
+            cat2.setActive(true);
+            cat2 = serviceCategoryRepository.save(cat2);
+
+            serviceCatalogRepository.save(ServiceCatalog.builder().itemName("Shirt").category(cat1).price(50.0).build());
+            serviceCatalogRepository.save(ServiceCatalog.builder().itemName("T-Shirt").category(cat1).price(40.0).build());
+            serviceCatalogRepository.save(ServiceCatalog.builder().itemName("Trousers").category(cat1).price(60.0).build());
+            serviceCatalogRepository.save(ServiceCatalog.builder().itemName("Jeans").category(cat1).price(70.0).build());
+            serviceCatalogRepository.save(ServiceCatalog.builder().itemName("Blazer").category(cat1).price(200.0).build());
+            serviceCatalogRepository.save(ServiceCatalog.builder().itemName("Jacket").category(cat1).price(250.0).build());
+            serviceCatalogRepository.save(ServiceCatalog.builder().itemName("Coat").category(cat2).price(300.0).build());
+            serviceCatalogRepository.save(ServiceCatalog.builder().itemName("Shirt").category(cat2).price(20.0).build());
+            serviceCatalogRepository.save(ServiceCatalog.builder().itemName("Trousers").category(cat2).price(25.0).build());
+            serviceCatalogRepository.save(ServiceCatalog.builder().itemName("T-Shirt").category(cat2).price(15.0).build());
         }
 
         // ─────────────────────────────────────────────────────────

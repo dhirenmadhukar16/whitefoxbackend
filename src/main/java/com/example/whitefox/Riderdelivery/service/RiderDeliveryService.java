@@ -18,4 +18,6 @@ public interface RiderDeliveryService {
     OrderResponse markDelivered(UUID orderId);
 
     OrderResponse markDeliveryFailed(UUID orderId);
+    
+    OrderResponse verifyOtp(UUID orderId, com.example.whitefox.Riderdelivery.dto.VerifyOtpRequest request);
 }

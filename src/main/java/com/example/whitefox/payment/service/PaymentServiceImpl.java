@@ -24,6 +24,11 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final LaundryOrderRepository orderRepository;
+    private final com.example.whitefox.customerbooking.repository.CustomerBookingRepository bookingRepository;
+    
+    @org.springframework.context.annotation.Lazy 
+    @org.springframework.beans.factory.annotation.Autowired 
+    private com.example.whitefox.customerbooking.service.CustomerBookingService bookingService;
 
     @Value("${razorpay.key_id}")
     private String razorpayKeyId;
@@ -41,10 +46,14 @@ public class PaymentServiceImpl implements PaymentService {
 
             int amountInPaise = (int) Math.round(request.getAmount() * 100);
 
-            if ("YOUR_KEY_ID".equals(razorpayKeyId)) {
+            if (amountInPaise < 100) {
+                throw new RuntimeException("Amount must be at least 1 INR (100 paise)");
+            }
+
+            if ("YOUR_KEY_ID".equals(razorpayKeyId) || razorpayKeyId.startsWith("dummy")) {
                 return RazorpayCreateOrderResponse.builder()
                         .orderId(order.getId())
-                        .razorpayOrderId("order_dummy_" + System.currentTimeMillis())
+                        .razorpayOrderId("order_mock_" + System.currentTimeMillis())
                         .keyId(razorpayKeyId)
                         .amount(request.getAmount())
                         .amountInPaise(amountInPaise)
@@ -85,15 +94,21 @@ public class PaymentServiceImpl implements PaymentService {
             RazorpayVerifyPaymentRequest request
     ) {
         try {
-            JSONObject attributes = new JSONObject();
-            attributes.put("razorpay_order_id", request.getRazorpayOrderId());
-            attributes.put("razorpay_payment_id", request.getRazorpayPaymentId());
-            attributes.put("razorpay_signature", request.getRazorpaySignature());
+            boolean valid = false;
 
-            boolean valid = Utils.verifyPaymentSignature(
-                    attributes,
-                    razorpayKeySecret
-            );
+            if ("YOUR_KEY_ID".equals(razorpayKeyId) || razorpayKeyId.startsWith("dummy")) {
+                valid = true;
+            } else {
+                JSONObject attributes = new JSONObject();
+                attributes.put("razorpay_order_id", request.getRazorpayOrderId());
+                attributes.put("razorpay_payment_id", request.getRazorpayPaymentId());
+                attributes.put("razorpay_signature", request.getRazorpaySignature());
+    
+                valid = Utils.verifyPaymentSignature(
+                        attributes,
+                        razorpayKeySecret
+                );
+            }
 
             if (!valid) {
                 throw new RuntimeException("Invalid Razorpay signature");
@@ -301,5 +316,88 @@ public class PaymentServiceImpl implements PaymentService {
 
         order.setPaymentStatus(PaymentStatus.COD_PENDING);
         orderRepository.save(order);
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public RazorpayCreateOrderResponse createRazorpayBookingOrder(RazorpayCreateBookingOrderRequest request) {
+        try {
+            com.example.whitefox.customerbooking.entity.CustomerBooking booking = bookingRepository.findById(request.getBookingId())
+                    .orElseThrow(() -> new RuntimeException("Booking not found"));
+            
+            booking.setPaymentMode(request.getPaymentMode());
+            bookingRepository.save(booking);
+
+            int amountInPaise = (int) Math.round(request.getAmount() * 100);
+            if (amountInPaise < 100) {
+                throw new RuntimeException("Amount must be at least 1 INR (100 paise)");
+            }
+
+            if ("YOUR_KEY_ID".equals(razorpayKeyId) || razorpayKeyId.startsWith("dummy")) {
+                return RazorpayCreateOrderResponse.builder()
+                        .orderId(booking.getId())
+                        .razorpayOrderId("order_mock_" + System.currentTimeMillis())
+                        .keyId(razorpayKeyId != null ? razorpayKeyId.trim() : null)
+                        .amount(request.getAmount())
+                        .amountInPaise(amountInPaise)
+                        .currency("INR")
+                        .build();
+            }
+
+            com.razorpay.RazorpayClient razorpayClient = new com.razorpay.RazorpayClient(
+                    razorpayKeyId != null ? razorpayKeyId.trim() : "",
+                    razorpayKeySecret != null ? razorpayKeySecret.trim() : ""
+            );
+            org.json.JSONObject options = new org.json.JSONObject();
+            options.put("amount", amountInPaise);
+            options.put("currency", "INR");
+            options.put("receipt", "WFB-" + booking.getId().toString().substring(0, 8));
+            options.put("payment_capture", 1);
+
+            com.razorpay.Order razorpayOrder = razorpayClient.orders.create(options);
+
+            return RazorpayCreateOrderResponse.builder()
+                    .orderId(booking.getId())
+                    .razorpayOrderId(razorpayOrder.get("id"))
+                    .keyId(razorpayKeyId != null ? razorpayKeyId.trim() : null)
+                    .amount(request.getAmount())
+                    .amountInPaise(amountInPaise)
+                    .currency("INR")
+                    .build();
+        } catch (com.razorpay.RazorpayException e) {
+            throw new RuntimeException("Error creating Razorpay booking order: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public com.example.whitefox.customerbooking.dto.CustomerBookingResponse verifyRazorpayBookingPayment(RazorpayVerifyBookingPaymentRequest request) {
+        com.example.whitefox.customerbooking.entity.CustomerBooking booking = bookingRepository.findById(request.getBookingId())
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+        if (!"YOUR_KEY_ID".equals(razorpayKeyId) && !razorpayKeyId.startsWith("dummy")) {
+            try {
+                String secret = razorpayKeySecret != null ? razorpayKeySecret.trim() : "";
+                String generatedSignature = org.apache.commons.codec.digest.HmacUtils.hmacSha256Hex(secret, request.getRazorpayOrderId() + "|" + request.getRazorpayPaymentId());
+                if (!generatedSignature.equals(request.getRazorpaySignature())) {
+                    throw new RuntimeException("Payment signature verification failed");
+                }
+            } catch (Exception e) {
+                throw new RuntimeException("Error verifying signature: " + e.getMessage(), e);
+            }
+        }
+        
+        Double currentAmountPaid = booking.getAmountPaid() != null ? booking.getAmountPaid() : 0.0;
+        
+        if ("FULL_ONLINE".equals(booking.getPaymentMode())) {
+            booking.setAmountPaid(booking.getEstimatedAmount());
+        } else if ("HALF_ADVANCE".equals(booking.getPaymentMode())) {
+            booking.setAmountPaid(booking.getEstimatedAmount() / 2);
+        } else {
+            booking.setAmountPaid(currentAmountPaid); // or updated based on Razorpay amount if fetched
+        }
+
+        com.example.whitefox.customerbooking.entity.CustomerBooking saved = bookingRepository.save(booking);
+        return bookingService.getBooking(saved.getId());
     }
 }

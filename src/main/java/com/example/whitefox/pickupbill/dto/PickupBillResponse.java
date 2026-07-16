@@ -47,5 +47,7 @@ public class PickupBillResponse {
 
     private PickupBillStatus status;
 
+    private String rejectionReason;
+
     private List<PickupBillItemResponse> items;
 }

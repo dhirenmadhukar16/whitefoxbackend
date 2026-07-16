@@ -5,7 +5,9 @@ import com.example.whitefox.customerupdates.enums.CustomerUpdateType;
 import com.example.whitefox.customerupdates.service.CustomerUpdateService;
 import com.example.whitefox.orders.entity.LaundryOrder;
 import com.example.whitefox.orders.enums.OrderStatus;
+import com.example.whitefox.orders.enums.PaymentStatus;
 import com.example.whitefox.orders.repository.LaundryOrderRepository;
+import com.example.whitefox.payment.repository.PaymentRepository;
 import com.example.whitefox.pickupbill.dto.PickupBillResponse;
 import com.example.whitefox.pickupbill.entity.PickupBill;
 import com.example.whitefox.pickupbill.enums.PickupBillStatus;
@@ -20,6 +22,10 @@ import com.example.whitefox.tracking.entity.Garment;
 import com.example.whitefox.tracking.repository.GarmentRepository;
 import com.example.whitefox.customers.repository.CustomerRepository;
 import com.example.whitefox.customers.entity.Customer;
+import com.example.whitefox.riders.entity.Rider;
+import com.example.whitefox.riders.enums.RiderStatus;
+import com.example.whitefox.riders.repository.RiderRepository;
+import com.example.whitefox.riders.dto.RiderResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -46,6 +52,8 @@ public class StoreOperationsServiceImpl implements StoreOperationsService {
     private final StoreServicePricingRepository pricingRepository;
     private final ServiceCatalogRepository serviceCatalogRepository;
     private final CustomerRepository customerRepository;
+    private final RiderRepository riderRepository;
+    private final PaymentRepository paymentRepository;
 
     @Override
     public StoreDashboardResponse getDashboard(UUID storeId) {
@@ -151,6 +159,10 @@ public class StoreOperationsServiceImpl implements StoreOperationsService {
     public StoreOrderSummaryResponse markReadyForCustomerPickup(UUID orderId) {
         LaundryOrder order = getOrder(orderId);
         order.setStatus(OrderStatus.READY_FOR_CUSTOMER_PICKUP);
+        
+        // Generate 4-digit OTP for self-pickup
+        String otp = String.format("%04d", new java.util.Random().nextInt(10000));
+        order.setDeliveryOtp(otp);
 
         LaundryOrder saved = orderRepository.save(order);
 
@@ -168,6 +180,10 @@ public class StoreOperationsServiceImpl implements StoreOperationsService {
     public StoreOrderSummaryResponse markOutForDelivery(UUID orderId) {
         LaundryOrder order = getOrder(orderId);
         order.setStatus(OrderStatus.OUT_FOR_DELIVERY);
+        
+        // Generate 4-digit OTP
+        String otp = String.format("%04d", new java.util.Random().nextInt(10000));
+        order.setDeliveryOtp(otp);
 
         LaundryOrder saved = orderRepository.save(order);
 
@@ -207,6 +223,19 @@ public class StoreOperationsServiceImpl implements StoreOperationsService {
         return mapOrder(saved);
     }
 
+    @Override
+    public StoreOrderSummaryResponse verifyPickupOtp(UUID orderId, String otp) {
+        LaundryOrder order = getOrder(orderId);
+        if (order.getStatus() != OrderStatus.READY_FOR_CUSTOMER_PICKUP) {
+            throw new RuntimeException("Order is not ready for pickup.");
+        }
+        if (order.getDeliveryOtp() == null || !order.getDeliveryOtp().equals(otp)) {
+            throw new RuntimeException("Invalid OTP.");
+        }
+        
+        return markDelivered(orderId);
+    }
+
     private Store getStore(UUID storeId) {
         return storeRepository.findById(storeId)
                 .orElseThrow(() -> new RuntimeException("Store not found"));
@@ -243,6 +272,10 @@ public class StoreOperationsServiceImpl implements StoreOperationsService {
                 .customerPhone(order.getCustomer().getPhone())
                 .status(order.getStatus())
                 .paymentStatus(order.getPaymentStatus())
+                .deliveryType(order.getDeliveryType() != null ? order.getDeliveryType().name() : null)
+                .pickupType(order.getPickupType())
+                .deliveryOtp(order.getDeliveryOtp())
+                .pickupOtp(order.getPickupOtp())
                 .totalAmount(order.getTotalAmount())
                 .build();
     }
@@ -294,7 +327,7 @@ public class StoreOperationsServiceImpl implements StoreOperationsService {
 
             return StoreServicePricingDto.builder()
                     .serviceId(service.getId())
-                    .serviceType(service.getServiceType())
+                    .serviceType(service.getCategory() != null ? service.getCategory().getName() : null)
                     .itemName(service.getItemName())
                     .globalPrice(service.getPrice())
                     .storeCustomPrice(custom != null ? custom.getCustomPrice() : null)
@@ -322,11 +355,103 @@ public class StoreOperationsServiceImpl implements StoreOperationsService {
 
         return StoreServicePricingDto.builder()
                 .serviceId(service.getId())
-                .serviceType(service.getServiceType())
+                .serviceType(service.getCategory() != null ? service.getCategory().getName() : null)
                 .itemName(service.getItemName())
                 .globalPrice(service.getPrice())
                 .storeCustomPrice(pricing.getCustomPrice())
                 .isOverridden(true)
+                .build();
+    }
+
+    @Override
+    public StoreOrderSummaryResponse settleCash(UUID orderId) {
+        LaundryOrder order = getOrder(orderId);
+        if (order.getPaymentStatus() == PaymentStatus.CASH_WITH_RIDER || order.getPaymentStatus() == PaymentStatus.PENDING) {
+            order.setPaymentStatus(PaymentStatus.PAID);
+            order.setPaidAmount(order.getTotalAmount());
+            order.setRemainingAmount(0.0);
+            
+            LaundryOrder saved = orderRepository.save(order);
+            return mapOrder(saved);
+        }
+        throw new RuntimeException("Order is not eligible for cash settlement.");
+    }
+
+    @Override
+    public StoreOrderSummaryResponse settleOnlinePayment(UUID orderId) {
+        LaundryOrder order = getOrder(orderId);
+        if (order.getPaymentStatus() == PaymentStatus.PENDING || order.getPaymentStatus() == PaymentStatus.CASH_WITH_RIDER) {
+            order.setPaymentStatus(PaymentStatus.PAID);
+            order.setPaidAmount(order.getTotalAmount());
+            order.setRemainingAmount(0.0);
+            
+            // Generate a fake payment transaction to keep track
+            com.example.whitefox.payment.entity.Payment payment = com.example.whitefox.payment.entity.Payment.builder()
+                .order(order)
+                .store(order.getStore())
+                .amount(order.getTotalAmount())
+                .paymentMode(com.example.whitefox.payment.enums.PaymentMode.UPI)
+                .transactionReference("STORE_UPI_" + System.currentTimeMillis())
+                .remarks("UPI Payment collected at Store")
+                .status(com.example.whitefox.payment.enums.PaymentTransactionStatus.SUCCESS)
+                .build();
+            paymentRepository.save(payment);
+            
+            LaundryOrder saved = orderRepository.save(order);
+            return mapOrder(saved);
+        }
+        throw new RuntimeException("Order is not eligible for online payment settlement.");
+    }
+
+    @Override
+    public List<RiderResponse> getPendingRiders(UUID storeId) {
+        return riderRepository.findAll().stream()
+                .filter(r -> r.getStore() != null && r.getStore().getId().equals(storeId))
+                .filter(r -> r.getStatus() == RiderStatus.PENDING_APPROVAL)
+                .map(this::mapRider)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public RiderResponse approveRider(UUID riderId) {
+        Rider rider = riderRepository.findById(riderId)
+                .orElseThrow(() -> new RuntimeException("Rider not found"));
+        
+        if (rider.getStatus() != RiderStatus.PENDING_APPROVAL) {
+            throw new RuntimeException("Rider is not pending approval");
+        }
+        
+        rider.setStatus(RiderStatus.AVAILABLE);
+        Rider saved = riderRepository.save(rider);
+        return mapRider(saved);
+    }
+
+    @Override
+    public RiderResponse rejectRider(UUID riderId) {
+        Rider rider = riderRepository.findById(riderId)
+                .orElseThrow(() -> new RuntimeException("Rider not found"));
+        
+        if (rider.getStatus() != RiderStatus.PENDING_APPROVAL) {
+            throw new RuntimeException("Rider is not pending approval");
+        }
+        
+        rider.setStatus(RiderStatus.REJECTED);
+        Rider saved = riderRepository.save(rider);
+        return mapRider(saved);
+    }
+
+    private RiderResponse mapRider(Rider rider) {
+        return RiderResponse.builder()
+                .id(rider.getId())
+                .riderCode(rider.getRiderCode())
+                .name(rider.getName())
+                .phone(rider.getPhone())
+                .email(rider.getEmail())
+                .whatsappNumber(rider.getWhatsappNumber())
+                .vehicleNumber(rider.getVehicleNumber())
+                .status(rider.getStatus())
+                .active(rider.getActive())
+                .storeId(rider.getStore() != null ? rider.getStore().getId() : null)
                 .build();
     }
 }

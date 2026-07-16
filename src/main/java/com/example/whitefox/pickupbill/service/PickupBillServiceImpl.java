@@ -25,7 +25,10 @@ import java.util.List;
 import java.util.UUID;
 import com.example.whitefox.realtime.dto.RealtimeEvent;
 import com.example.whitefox.realtime.service.RealtimeEventService;
+import org.springframework.transaction.annotation.Transactional;
+
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class PickupBillServiceImpl implements PickupBillService {
 
@@ -361,7 +364,31 @@ public class PickupBillServiceImpl implements PickupBillService {
                 .gst(bill.getGst())
                 .totalAmount(bill.getTotalAmount())
                 .status(bill.getStatus())
+                .rejectionReason(bill.getRejectionReason())
                 .items(items)
                 .build();
+    }
+
+    @Override
+    public PickupBillResponse rejectPickupBill(UUID id, RejectPickupBillRequest request) {
+        PickupBill bill = pickupBillRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Pickup bill not found"));
+
+        bill.setStatus(PickupBillStatus.REJECTED_BY_STORE);
+        bill.setRejectionReason(request.getReason());
+        
+        PickupBill saved = pickupBillRepository.save(bill);
+
+        realtimeEventService.sendToAdmin(
+                RealtimeEvent.builder()
+                        .type("PICKUP_BILL_REJECTED")
+                        .title("Pickup Bill Rejected")
+                        .message("Store rejected the pickup bill.")
+                        .referenceId(saved.getId())
+                        .status(saved.getStatus().name())
+                        .build()
+        );
+
+        return map(saved);
     }
 }

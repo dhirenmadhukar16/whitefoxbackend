@@ -20,6 +20,8 @@ public class CustomerBookingResponse {
 
     private String customerName;
 
+    private String customerPhone;
+
     private UUID storeId;
 
     private String storeName;
@@ -39,6 +41,14 @@ public class CustomerBookingResponse {
     private Double estimatedAmount;
 
     private CustomerBookingStatus status;
+
+    private String rejectionReason;
+
+    private String deliveryType;
+
+    private String paymentMode;
+
+    private Double amountPaid;
 
     private List<CustomerBookingItemResponse> items;
 }

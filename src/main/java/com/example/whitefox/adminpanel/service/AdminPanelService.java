@@ -5,7 +5,8 @@ import com.example.whitefox.adminpanel.dto.AdminReviewResponse;
 import java.util.List;
 import com.example.whitefox.adminpanel.dto.AdminReviewResponse;
 import com.example.whitefox.adminpanel.dto.AdminBookingResponse;
-import com.example.whitefox.adminpanel.dto.AdminCatalogStatsResponse;
+import com.example.whitefox.adminpanel.dto.AdminFinanceStatsResponse;
+import com.example.whitefox.adminpanel.dto.AdminStoreAnalyticsResponse;
 import com.example.whitefox.adminpanel.dto.AdminHqOperationsResponse;
 import com.example.whitefox.adminpanel.dto.AdminSearchResponse;
 import com.example.whitefox.adminpanel.dto.AdminTruckStatsResponse;
@@ -15,6 +16,8 @@ import java.util.UUID;
 public interface AdminPanelService {
 
     AdminDashboardResponse getDashboard();
+    
+    AdminStoreAnalyticsResponse getStoreAnalytics(UUID storeId, int days);
     java.util.List<AdminStoreStatsResponse> getStoreStats();
     List<AdminRiderStatsResponse> getRiderStats();
     AdminRiderDetailResponse getRiderDetails(UUID id);

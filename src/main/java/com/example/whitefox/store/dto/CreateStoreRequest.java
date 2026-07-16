@@ -12,6 +12,8 @@ public class CreateStoreRequest {
 
     private String name;
 
+    private String storeAdminName;
+
     private String phone;
 
     private String email;

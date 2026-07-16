@@ -20,4 +20,7 @@ public class CreateOrderRequest {
     private LocalDate deliveryDate;
 
     private List<OrderItemRequest> items;
+    
+    private String deliveryType; // "RIDER_DELIVERY" or "SELF_PICKUP"
+    private String deliveryAddress;
 }

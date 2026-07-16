@@ -28,6 +28,8 @@ public interface CustomerBookingService {
     CustomerBookingResponse markPickupBillCreated(UUID bookingId);
 
     CustomerBookingResponse cancelBooking(UUID bookingId);
+
+    CustomerBookingResponse rejectStoreAssignment(UUID bookingId, RejectBookingRequest request);
     
     List<CustomerBookingResponse> getUnassignedBookings();
 

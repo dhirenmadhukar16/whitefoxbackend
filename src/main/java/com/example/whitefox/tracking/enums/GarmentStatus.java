@@ -3,6 +3,7 @@ package com.example.whitefox.tracking.enums;
 public enum GarmentStatus {
     TAGGED_AT_STORE,
     LOADED_FOR_HQ,
+    DROPPED_AT_HQ,
     RECEIVED_AT_HQ,
     PROCESSING,
     PROCESSED_QR_REATTACHED,
@@ -10,6 +11,7 @@ public enum GarmentStatus {
     DROPPED_AT_STORE,
     REPORTED_MISSING,
     READY_FOR_CUSTOMER_PICKUP,
+    READY_FOR_DELIVERY,
     ASSIGNED_FOR_DELIVERY,
     OUT_FOR_DELIVERY,
     DELIVERED,

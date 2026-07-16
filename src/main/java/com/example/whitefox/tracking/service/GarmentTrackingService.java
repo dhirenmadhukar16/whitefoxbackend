@@ -45,4 +45,14 @@ public interface GarmentTrackingService {
     GarmentResponse reportGarmentMissing(
             UUID garmentId
     );
+
+    List<TruckRouteResponse> getTruckPickupRoutes();
+    List<TruckRouteResponse> getTruckDropRoutes();
+    List<TrackingHistoryResponse> getTruckHistory(String date, String role);
+    List<GarmentResponse> approveStoreDrops(UUID storeId);
+
+    List<GarmentResponse> pickupStore(UUID storeId);
+    List<GarmentResponse> dropHq();
+    List<GarmentResponse> approveDrop();
+    List<GarmentResponse> getDispatchedHistory(String date);
 }

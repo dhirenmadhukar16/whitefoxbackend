@@ -55,6 +55,14 @@ public class CustomerBooking {
 
     private LocalDateTime updatedAt;
 
+    private String rejectionReason;
+
+    private String deliveryType; // RIDER_DELIVERY, SELF_PICKUP
+
+    private String paymentMode; // FULL_ONLINE, HALF_ADVANCE, CASH_ON_DELIVERY
+
+    private Double amountPaid;
+
     @PrePersist
     public void prePersist() {
         status = CustomerBookingStatus.REQUESTED;

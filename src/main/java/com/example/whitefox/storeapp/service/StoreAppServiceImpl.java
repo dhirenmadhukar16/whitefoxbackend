@@ -12,7 +12,11 @@ import com.example.whitefox.orders.repository.LaundryOrderRepository;
 import com.example.whitefox.orders.repository.LaundryOrderRepository;
 import com.example.whitefox.riders.dto.RiderResponse;
 import com.example.whitefox.riders.entity.Rider;
+import com.example.whitefox.riders.enums.RiderStatus;
 import com.example.whitefox.riders.repository.RiderRepository;
+import com.example.whitefox.auth.entity.User;
+import com.example.whitefox.auth.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import com.example.whitefox.storeemployee.dto.CreateStoreEmployeeRequest;
 import com.example.whitefox.storeemployee.dto.StoreEmployeeResponse;
 import com.example.whitefox.storeemployee.dto.UpdateStoreEmployeeRequest;
@@ -21,8 +25,11 @@ import com.example.whitefox.storeemployee.entity.StoreEmployee;
 import com.example.whitefox.storeemployee.enums.StoreEmployeeStatus;
 import com.example.whitefox.storeemployee.repository.StoreEmployeeRepository;
 import com.example.whitefox.store.repository.StoreRepository;
+import com.example.whitefox.store.repository.StoreRepository;
+import com.example.whitefox.storeemployee.enums.StoreEmployeeRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import java.util.Optional;
 
 import java.util.List;
 import java.util.UUID;
@@ -34,9 +41,11 @@ public class StoreAppServiceImpl implements StoreAppService {
     private final StoreRepository storeRepository;
     private final StoreEmployeeRepository storeEmployeeRepository;
     private final RiderRepository riderRepository;
+    private final UserRepository userRepository;
     private final CustomerBookingRepository customerBookingRepository;
     private final LaundryOrderRepository orderRepository;
     private final CustomerBookingService customerBookingService;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public List<StoreEmployeeResponse> getEmployees(UUID storeId) {
@@ -61,7 +70,48 @@ public class StoreAppServiceImpl implements StoreAppService {
                 .active(true)
                 .build();
 
-        return mapEmployee(storeEmployeeRepository.save(employee));
+        StoreEmployee savedEmployee = storeEmployeeRepository.save(employee);
+
+        if (request.getRole() == StoreEmployeeRole.RIDER) {
+            Optional<Rider> riderOpt = riderRepository.findByPhone(request.getPhone());
+            if (riderOpt.isEmpty()) {
+                Rider rider = Rider.builder()
+                        .name(request.getName())
+                        .phone(request.getPhone())
+                        .email(request.getEmail() != null ? request.getEmail() : "rider_" + request.getPhone() + "@whitefox.local")
+                        .store(store)
+                        .status(RiderStatus.AVAILABLE)
+                        .active(true)
+                        .build();
+                riderRepository.save(rider);
+            } else {
+                Rider existingRider = riderOpt.get();
+                existingRider.setStore(store);
+                existingRider.setStatus(RiderStatus.AVAILABLE);
+                riderRepository.save(existingRider);
+            }
+
+            Optional<User> userOpt = userRepository.findByPhone(request.getPhone());
+            if (userOpt.isEmpty()) {
+                User user = User.builder()
+                        .firstName(request.getName())
+                        .lastName("Rider")
+                        .phone(request.getPhone())
+                        .email(request.getEmail() != null ? request.getEmail() : "rider_" + request.getPhone() + "@whitefox.local")
+                        .password(passwordEncoder.encode(java.util.UUID.randomUUID().toString()))
+                        .role("RIDER")
+                        .storeId(store.getId())
+                        .active(true)
+                        .build();
+                userRepository.save(user);
+            } else {
+                User existingUser = userOpt.get();
+                existingUser.setStoreId(store.getId());
+                userRepository.save(existingUser);
+            }
+        }
+
+        return mapEmployee(savedEmployee);
     }
 
     @Override
@@ -121,6 +171,22 @@ public class StoreAppServiceImpl implements StoreAppService {
         order.setDeliveryRider(rider);
 
         return mapOrder(orderRepository.save(order));
+    }
+
+    @Override
+    public void resetRiderPassword(UUID storeId, UUID riderId, String newPassword) {
+        Rider rider = riderRepository.findById(riderId)
+                .orElseThrow(() -> new RuntimeException("Rider not found"));
+
+        if (rider.getStore() == null || !rider.getStore().getId().equals(storeId)) {
+            throw new RuntimeException("Rider does not belong to this store");
+        }
+
+        User user = userRepository.findByPhone(rider.getPhone())
+                .orElseThrow(() -> new RuntimeException("Rider user account not found"));
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
     }
 
     private StoreEmployeeResponse mapEmployee(StoreEmployee employee) {

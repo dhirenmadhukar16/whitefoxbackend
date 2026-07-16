@@ -24,8 +24,9 @@ public class Store {
     @Column(unique = true, nullable = false)
     private String storeCode;
 
-    @Column(nullable = false)
     private String name;
+
+    private String storeAdminName;
 
     private String phone;
 

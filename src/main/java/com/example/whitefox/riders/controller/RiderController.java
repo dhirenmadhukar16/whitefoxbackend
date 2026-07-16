@@ -17,10 +17,7 @@ public class RiderController {
 
     private final RiderService riderService;
 
-    @PostMapping
-    public RiderResponse createRider(@RequestBody CreateRiderRequest request) {
-        return riderService.createRider(request);
-    }
+    // Create Rider is now handled by rider self-signup + store approval
 
     @GetMapping
     public List<RiderResponse> getAllRiders() {
@@ -32,13 +29,7 @@ public class RiderController {
         return riderService.getRider(id);
     }
 
-    @PutMapping("/{id}")
-    public RiderResponse updateRider(
-            @PathVariable UUID id,
-            @RequestBody CreateRiderRequest request
-    ) {
-        return riderService.updateRider(id, request);
-    }
+    // Update Rider is now handled by store ops or rider app
 
     @PatchMapping("/{id}/status")
     public RiderResponse updateStatus(

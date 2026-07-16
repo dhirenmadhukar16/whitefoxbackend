@@ -12,6 +12,9 @@ import com.example.whitefox.orders.repository.LaundryOrderRepository;
 import com.example.whitefox.orders.repository.OrderItemRepository;
 import com.example.whitefox.riders.entity.Rider;
 import com.example.whitefox.riders.repository.RiderRepository;
+import com.example.whitefox.tracking.enums.GarmentStatus;
+import com.example.whitefox.tracking.repository.GarmentRepository;
+import com.example.whitefox.Riderdelivery.dto.VerifyOtpRequest;
 import com.example.whitefox.customers.repository.CustomerRepository;
 import com.example.whitefox.customers.entity.Customer;
 import lombok.RequiredArgsConstructor;
@@ -176,5 +179,25 @@ public class RiderDeliveryServiceImpl implements RiderDeliveryService {
                 .unitPrice(item.getUnitPrice())
                 .totalPrice(item.getTotalPrice())
                 .build();
+    }
+
+    @Override
+    public OrderResponse verifyOtp(UUID orderId, VerifyOtpRequest request) {
+        LaundryOrder order = getOrder(orderId);
+
+        if (order.getDeliveryOtp() != null && !order.getDeliveryOtp().equals(request.getOtp())) {
+            throw new RuntimeException("Invalid OTP");
+        }
+
+        // If OTP matches, check if rider collected cash
+        if (request.isCashCollected()) {
+            double amountToCollect = order.getRemainingAmount() != null ? order.getRemainingAmount() : 
+                                     (order.getTotalAmount() != null ? order.getTotalAmount() : 0.0);
+            order.setPaidAmount((order.getPaidAmount() != null ? order.getPaidAmount() : 0.0) + amountToCollect);
+            order.setRemainingAmount(0.0);
+            order.setPaymentStatus(com.example.whitefox.orders.enums.PaymentStatus.CASH_WITH_RIDER);
+        }
+
+        return markDelivered(orderId);
     }
 }

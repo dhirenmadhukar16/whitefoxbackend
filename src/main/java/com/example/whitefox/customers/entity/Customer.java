@@ -32,6 +32,8 @@ public class Customer {
 
     private String email;
 
+    private String whatsappNumber;
+
     private String address;
 
     private String city;

@@ -36,6 +36,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         .requestMatchers(
+                                "/api/wipe-test-data",
                                 "/api/v1/auth/**",
                                 "/api/v1/storage/**",
                                 "/uploads/**",
@@ -68,6 +69,7 @@ public class SecurityConfig {
                                 "/api/hq/**",
                                 "/api/store-app/**",
                                 "/api/customers/**",
+                                "/api/admin/stores/public",
                                 "/api/admin/catalog/**",
                                 "/api/orders/**"
 

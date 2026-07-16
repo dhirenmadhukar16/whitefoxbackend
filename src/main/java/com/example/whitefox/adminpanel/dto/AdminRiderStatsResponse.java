@@ -16,6 +16,7 @@ public class AdminRiderStatsResponse {
     private String riderCode;
     private String phone;
     private String status;
+    private String storeName;
 
     private Long deliveryOrders;
     private Long pickupBills;

@@ -16,4 +16,6 @@ public interface OrderService {
     OrderResponse getOrder(UUID orderId);
 
     List<OrderResponse> getAllOrders();
+
+    OrderResponse changeDeliveryType(UUID orderId, String deliveryType);
 }

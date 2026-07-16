@@ -23,7 +23,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 "/topic/customer",
                 "/topic/store",
                 "/topic/rider",
-                "/topic/admin"
+                "/topic/admin",
+                "/topic/location"
         );
 
         registry.setApplicationDestinationPrefixes("/app");

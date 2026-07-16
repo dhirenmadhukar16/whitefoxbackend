@@ -6,6 +6,7 @@ import com.example.whitefox.tracking.dto.*;
 import com.example.whitefox.tracking.service.GarmentTrackingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 import java.util.UUID;
@@ -122,5 +123,52 @@ public class GarmentTrackingController {
             @PathVariable UUID orderId
     ) {
         return garmentTrackingService.receiveOrderGarmentsBackAtStore(orderId);
+    }
+
+    @GetMapping("/truck/pickup-routes")
+    public List<TruckRouteResponse> getTruckPickupRoutes() {
+        return garmentTrackingService.getTruckPickupRoutes();
+    }
+
+    @GetMapping("/truck/drop-routes")
+    public List<TruckRouteResponse> getTruckDropRoutes() {
+        return garmentTrackingService.getTruckDropRoutes();
+    }
+
+    @GetMapping("/truck/history")
+    public List<TrackingHistoryResponse> getTruckHistory(
+            @RequestParam(required = false) String date,
+            @RequestParam String role
+    ) {
+        return garmentTrackingService.getTruckHistory(date, role);
+    }
+
+    @PatchMapping("/store/{storeId}/approve-drops")
+    public List<GarmentResponse> approveStoreDrops(
+            @PathVariable UUID storeId
+    ) {
+        return garmentTrackingService.approveStoreDrops(storeId);
+    }
+
+    @PostMapping("/truck/pickup-store/{storeId}")
+    public ResponseEntity<List<GarmentResponse>> pickupStore(@PathVariable UUID storeId) {
+        return ResponseEntity.ok(garmentTrackingService.pickupStore(storeId));
+    }
+
+    @PostMapping("/truck/drop-hq")
+    public ResponseEntity<List<GarmentResponse>> dropHq() {
+        return ResponseEntity.ok(garmentTrackingService.dropHq());
+    }
+
+    @PostMapping("/hq/approve-drop")
+    public ResponseEntity<List<GarmentResponse>> approveDrop() {
+        return ResponseEntity.ok(garmentTrackingService.approveDrop());
+    }
+
+    @GetMapping("/hq/dispatched-history")
+    public ResponseEntity<List<GarmentResponse>> getDispatchedHistory(
+            @RequestParam(required = false) String date
+    ) {
+        return ResponseEntity.ok(garmentTrackingService.getDispatchedHistory(date));
     }
 }

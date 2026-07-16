@@ -36,4 +36,12 @@ public class OrderController {
     ) {
         return orderService.getOrder(id);
     }
+
+    @PatchMapping("/{id}/delivery-type")
+    public OrderResponse changeDeliveryType(
+            @PathVariable UUID id,
+            @RequestParam String deliveryType
+    ) {
+        return orderService.changeDeliveryType(id, deliveryType);
+    }
 }

@@ -38,6 +38,12 @@ public class StoreController {
         return storeService.getAllStores();
     }
 
+    @GetMapping("/public")
+    public List<StoreResponse> getPublicStores() {
+        // Anyone can get store list (for rider signup)
+        return storeService.getAllStores();
+    }
+
     @GetMapping("/{id}")
     public StoreResponse getStore(
             @PathVariable UUID id

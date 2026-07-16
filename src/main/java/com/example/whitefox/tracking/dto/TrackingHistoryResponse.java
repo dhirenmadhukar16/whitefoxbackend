@@ -17,4 +17,10 @@ public class TrackingHistoryResponse {
     private String remarks;
 
     private LocalDateTime createdAt;
+
+    private String itemName;
+    
+    private String storeName;
+    
+    private String storeQrCode;
 }

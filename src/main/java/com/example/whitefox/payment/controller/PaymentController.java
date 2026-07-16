@@ -66,4 +66,18 @@ public class PaymentController {
     ) {
         return paymentService.verifyRazorpayPayment(request);
     }
+
+    @PostMapping("/razorpay/create-booking-order")
+    public RazorpayCreateOrderResponse createRazorpayBookingOrder(
+            @RequestBody RazorpayCreateBookingOrderRequest request
+    ) {
+        return paymentService.createRazorpayBookingOrder(request);
+    }
+
+    @PostMapping("/razorpay/verify-booking")
+    public com.example.whitefox.customerbooking.dto.CustomerBookingResponse verifyRazorpayBookingPayment(
+            @RequestBody RazorpayVerifyBookingPaymentRequest request
+    ) {
+        return paymentService.verifyRazorpayBookingPayment(request);
+    }
 }

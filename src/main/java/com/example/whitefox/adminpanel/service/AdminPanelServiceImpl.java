@@ -380,29 +380,29 @@ public class AdminPanelServiceImpl implements AdminPanelService {
 
                 .laundryServices(
                         services.stream()
-                                .filter(s -> s.getServiceType() != null)
-                                .filter(s -> s.getServiceType().toUpperCase().contains("LAUNDRY"))
+                                .filter(s -> s.getCategory() != null)
+                                .filter(s -> s.getCategory().getName().toUpperCase().contains("LAUNDRY"))
                                 .count()
                 )
 
                 .dryCleaningServices(
                         services.stream()
-                                .filter(s -> s.getServiceType() != null)
-                                .filter(s -> s.getServiceType().toUpperCase().contains("DRY"))
+                                .filter(s -> s.getCategory() != null)
+                                .filter(s -> s.getCategory().getName().toUpperCase().contains("DRY"))
                                 .count()
                 )
 
                 .shoeCleaningServices(
                         services.stream()
-                                .filter(s -> s.getServiceType() != null)
-                                .filter(s -> s.getServiceType().toUpperCase().contains("SHOE"))
+                                .filter(s -> s.getCategory() != null)
+                                .filter(s -> s.getCategory().getName().toUpperCase().contains("SHOE"))
                                 .count()
                 )
 
                 .ironingServices(
                         services.stream()
-                                .filter(s -> s.getServiceType() != null)
-                                .filter(s -> s.getServiceType().toUpperCase().contains("IRON"))
+                                .filter(s -> s.getCategory() != null)
+                                .filter(s -> s.getCategory().getName().toUpperCase().contains("IRON"))
                                 .count()
                 )
 
@@ -733,6 +733,91 @@ public class AdminPanelServiceImpl implements AdminPanelService {
 
                 .build();
     }
+    
+    @Override
+    public AdminStoreAnalyticsResponse getStoreAnalytics(java.util.UUID storeId, int days) {
+        List<LaundryOrder> orders = orderRepository.findByStoreId(storeId);
+        
+        LocalDate cutoff = LocalDate.now().minusDays(days);
+        List<LaundryOrder> recentOrders = orders.stream()
+                .filter(o -> o.getCreatedAt() != null && !o.getCreatedAt().toLocalDate().isBefore(cutoff))
+                .toList();
+
+        java.util.Map<String, Long> dailyOrderCount = recentOrders.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        o -> o.getCreatedAt().toLocalDate().toString(),
+                        java.util.stream.Collectors.counting()
+                ));
+        
+        List<AdminStoreAnalyticsResponse.DailyMetric> dailyOrders = dailyOrderCount.entrySet().stream()
+                .map(e -> AdminStoreAnalyticsResponse.DailyMetric.builder()
+                        .date(e.getKey())
+                        .value(e.getValue().doubleValue())
+                        .build())
+                .sorted(java.util.Comparator.comparing(AdminStoreAnalyticsResponse.DailyMetric::getDate))
+                .toList();
+
+        java.util.Map<String, Double> dailyRevenueSum = recentOrders.stream()
+                .filter(o -> o.getTotalAmount() != null)
+                .collect(java.util.stream.Collectors.groupingBy(
+                        o -> o.getCreatedAt().toLocalDate().toString(),
+                        java.util.stream.Collectors.summingDouble(LaundryOrder::getTotalAmount)
+                ));
+
+        List<AdminStoreAnalyticsResponse.DailyMetric> dailyRevenue = dailyRevenueSum.entrySet().stream()
+                .map(e -> AdminStoreAnalyticsResponse.DailyMetric.builder()
+                        .date(e.getKey())
+                        .value(e.getValue())
+                        .build())
+                .sorted(java.util.Comparator.comparing(AdminStoreAnalyticsResponse.DailyMetric::getDate))
+                .toList();
+                
+        List<Garment> garments = garmentRepository.findAll().stream()
+                .filter(g -> g.getOrder() != null && g.getOrder().getStore() != null && g.getOrder().getStore().getId().equals(storeId))
+                .filter(g -> g.getCreatedAt() != null && !g.getCreatedAt().toLocalDate().isBefore(cutoff))
+                .toList();
+                
+        java.util.Map<String, Long> servicesMap = garments.stream()
+                .filter(g -> g.getServiceType() != null)
+                .collect(java.util.stream.Collectors.groupingBy(
+                        Garment::getServiceType,
+                        java.util.stream.Collectors.counting()
+                ));
+                
+        List<AdminStoreAnalyticsResponse.ServiceMetric> servicesBreakdown = servicesMap.entrySet().stream()
+                .map(e -> AdminStoreAnalyticsResponse.ServiceMetric.builder()
+                        .serviceName(e.getKey())
+                        .count(e.getValue())
+                        .build())
+                .toList();
+
+        java.util.Map<String, Double> revenueBreakdown = new java.util.HashMap<>();
+        double onlineRevenue = 0;
+        double cashReceived = 0;
+        double cashPendingWithRider = 0;
+
+        for (LaundryOrder o : recentOrders) {
+            if ("ONLINE".equalsIgnoreCase(o.getPaymentMethod()) && PaymentStatus.PAID.equals(o.getPaymentStatus())) {
+                onlineRevenue += (o.getTotalAmount() != null ? o.getTotalAmount() : 0.0);
+            } else if ("CASH".equalsIgnoreCase(o.getPaymentMethod()) && PaymentStatus.PAID.equals(o.getPaymentStatus())) {
+                cashReceived += (o.getTotalAmount() != null ? o.getTotalAmount() : 0.0);
+            } else if (PaymentStatus.CASH_WITH_RIDER.equals(o.getPaymentStatus())) {
+                cashPendingWithRider += (o.getTotalAmount() != null ? o.getTotalAmount() : 0.0);
+            }
+        }
+        
+        revenueBreakdown.put("Online", onlineRevenue);
+        revenueBreakdown.put("Cash (Received)", cashReceived);
+        revenueBreakdown.put("Cash (Pending with Rider)", cashPendingWithRider);
+
+        return AdminStoreAnalyticsResponse.builder()
+                .dailyOrders(dailyOrders)
+                .dailyRevenue(dailyRevenue)
+                .servicesBreakdown(servicesBreakdown)
+                .revenueBreakdown(revenueBreakdown)
+                .build();
+    }
+    
     @Override
     public List<AdminOrderResponse> getAllOrdersForAdmin() {
         return orderRepository.findAll()
@@ -781,6 +866,7 @@ public class AdminPanelServiceImpl implements AdminPanelService {
                         .riderCode(rider.getRiderCode())
                         .phone(rider.getPhone())
                         .status(rider.getStatus().name())
+                        .storeName(rider.getStore() != null ? rider.getStore().getName() : null)
 
                         .deliveryOrders(
                                 (long) orderRepository

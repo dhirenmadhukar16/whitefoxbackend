@@ -70,4 +70,13 @@ public class StoreAppController {
     public List<RiderResponse> getLiveRiders(@PathVariable UUID storeId) {
         return storeAppService.getRiders();
     }
+
+    @PatchMapping("/stores/{storeId}/riders/{riderId}/reset-password")
+    public void resetRiderPassword(
+            @PathVariable UUID storeId,
+            @PathVariable UUID riderId,
+            @RequestBody java.util.Map<String, String> request
+    ) {
+        storeAppService.resetRiderPassword(storeId, riderId, request.get("newPassword"));
+    }
 }

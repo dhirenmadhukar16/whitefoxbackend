@@ -7,5 +7,6 @@ public enum StoreEmployeeRole {
     BILLING_STAFF,
     COUNTER_STAFF,
     PACKING_STAFF,
-    STORE_SUPERVISOR
+    STORE_SUPERVISOR,
+    RIDER
 }

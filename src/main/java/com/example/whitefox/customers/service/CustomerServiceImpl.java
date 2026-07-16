@@ -30,6 +30,7 @@ public class CustomerServiceImpl
                 .name(request.getName())
                 .phone(request.getPhone())
                 .email(request.getEmail())
+                .whatsappNumber(request.getWhatsappNumber())
                 .address(request.getAddress())
                 .city(request.getCity())
                 .build();
@@ -73,8 +74,9 @@ public class CustomerServiceImpl
 
         customer.setName(request.getName());
         customer.setPhone(request.getPhone());
-        customer.setEmail(request.getEmail());
-        customer.setAddress(request.getAddress());
+        if (request.getEmail() != null) customer.setEmail(request.getEmail());
+        if (request.getWhatsappNumber() != null) customer.setWhatsappNumber(request.getWhatsappNumber());
+        if (request.getAddress() != null) customer.setAddress(request.getAddress());
         customer.setCity(request.getCity());
 
         Customer saved =
@@ -105,6 +107,7 @@ public class CustomerServiceImpl
                 .name(customer.getName())
                 .phone(customer.getPhone())
                 .email(customer.getEmail())
+                .whatsappNumber(customer.getWhatsappNumber())
                 .address(customer.getAddress())
                 .city(customer.getCity())
                 .active(customer.getActive())

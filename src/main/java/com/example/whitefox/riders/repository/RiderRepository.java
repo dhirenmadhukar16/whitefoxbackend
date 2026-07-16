@@ -16,4 +16,5 @@ public interface RiderRepository extends JpaRepository<Rider, UUID> {
     Optional<Rider> findByEmail(String email);
 
     List<Rider> findByStatusAndActiveTrue(RiderStatus status);
+    List<Rider> findByStoreId(UUID storeId);
 }

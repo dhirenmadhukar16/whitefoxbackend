@@ -1,5 +1,6 @@
 package com.example.whitefox.auth.service;
 
+import com.example.whitefox.auth.dto.AuthCheckDto;
 import com.example.whitefox.auth.dto.LoginRequest;
 import com.example.whitefox.auth.dto.LoginResponse;
 import com.example.whitefox.auth.dto.RegisterRequest;
@@ -13,6 +14,7 @@ import com.example.whitefox.customers.entity.Customer;
 import com.example.whitefox.trucklogistics.repository.TruckRepository;
 import org.springframework.stereotype.Service;
 import java.util.UUID;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -24,17 +26,39 @@ public class AuthService {
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
 
+    public AuthCheckDto.Response checkUser(AuthCheckDto.Request request) {
+        String identifier = request.getIdentifier();
+        Optional<User> userOpt = identifier.contains("@") 
+                ? userRepository.findByEmail(identifier) 
+                : userRepository.findByPhone(identifier);
+                
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            // If the user has a password, they should use PASSWORD auth.
+            // (Assuming all users created via Seeder or new flow will have passwords).
+            String authMethod = (user.getPassword() != null && !user.getPassword().isEmpty()) ? "PASSWORD" : "OTP";
+            return AuthCheckDto.Response.builder()
+                    .exists(true)
+                    .authMethod(authMethod)
+                    .role(user.getRole())
+                    .active(user.getActive() != null ? user.getActive() : true)
+                    .build();
+        }
+        
+        return AuthCheckDto.Response.builder()
+                .exists(false)
+                .authMethod("OTP")
+                .active(false)
+                .build();
+    }
+
     public LoginResponse login(LoginRequest request) {
+        String identifier = request.getIdentifier();
+        User user = identifier.contains("@") 
+                ? userRepository.findByEmail(identifier).orElseThrow(() -> new ResourceNotFoundException("Invalid credentials"))
+                : userRepository.findByPhone(identifier).orElseThrow(() -> new ResourceNotFoundException("Invalid credentials"));
 
-        User user = userRepository.findByEmail(
-                request.getEmail()
-        ).orElseThrow(() ->
-                new ResourceNotFoundException(
-                        "Invalid credentials"
-                )
-        );
-
-        if (!passwordEncoder.matches(
+        if (user.getPassword() == null || user.getPassword().isEmpty() || !passwordEncoder.matches(
                 request.getPassword(),
                 user.getPassword()
         )) {

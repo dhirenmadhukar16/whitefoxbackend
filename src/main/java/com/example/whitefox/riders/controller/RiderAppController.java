@@ -22,4 +22,11 @@ public class RiderAppController {
         String email = authentication.getName(); // The username is the email
         return riderService.getMe(email);
     }
+    
+    @org.springframework.web.bind.annotation.PutMapping("/me")
+    public RiderResponse updateMe(@org.springframework.web.bind.annotation.RequestBody com.example.whitefox.riders.dto.CompleteRiderProfileRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        return riderService.updateMe(email, request);
+    }
 }

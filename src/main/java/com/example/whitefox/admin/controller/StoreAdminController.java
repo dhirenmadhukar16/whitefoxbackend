@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@RestController
-@RequestMapping("/api/admin-panel/storeadmin")
+@RestController("adminModuleStoreAdminController")
+@RequestMapping("/api/admin/storeadmin")
 @CrossOrigin("*")
 public class StoreAdminController {
 

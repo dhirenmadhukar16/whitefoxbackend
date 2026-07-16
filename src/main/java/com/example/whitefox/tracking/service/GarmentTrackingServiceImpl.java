@@ -11,8 +11,11 @@ import com.example.whitefox.tracking.entity.GarmentTrackingHistory;
 import com.example.whitefox.tracking.enums.GarmentStatus;
 import com.example.whitefox.tracking.repository.GarmentRepository;
 import com.example.whitefox.tracking.repository.GarmentTrackingHistoryRepository;
+import com.example.whitefox.realtime.service.RealtimeEventService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,12 +23,14 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class GarmentTrackingServiceImpl implements GarmentTrackingService {
 
     private final GarmentRepository garmentRepository;
     private final GarmentTrackingHistoryRepository historyRepository;
     private final LaundryOrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
+    private final RealtimeEventService realtimeEventService;
 
     @Override
     public GarmentResponse createGarment(
@@ -161,10 +166,16 @@ public class GarmentTrackingServiceImpl implements GarmentTrackingService {
                 newStatus = GarmentStatus.LOADED_FOR_HQ;
             } else if (currentStatus == GarmentStatus.PROCESSED_QR_REATTACHED) {
                 newStatus = GarmentStatus.LOADED_FOR_STORE;
+            } else if (currentStatus == GarmentStatus.LOADED_FOR_STORE) {
+                newStatus = GarmentStatus.DROPPED_AT_STORE;
             }
         } else if ("HQ_ADMIN".equals(role) || "HQ".equals(role)) {
-            if (currentStatus == GarmentStatus.LOADED_FOR_HQ) {
+            if (currentStatus == GarmentStatus.LOADED_FOR_HQ || currentStatus == GarmentStatus.DROPPED_AT_HQ) {
                 newStatus = GarmentStatus.RECEIVED_AT_HQ;
+            } else if (currentStatus == GarmentStatus.RECEIVED_AT_HQ) {
+                newStatus = GarmentStatus.PROCESSING;
+            } else if (currentStatus == GarmentStatus.PROCESSING) {
+                newStatus = GarmentStatus.PROCESSED_QR_REATTACHED;
             }
         } else if ("STORE_MANAGER".equals(role) || "STORE".equals(role)) {
             if (currentStatus == GarmentStatus.LOADED_FOR_STORE) {
@@ -234,6 +245,10 @@ public class GarmentTrackingServiceImpl implements GarmentTrackingService {
                 order.setStatus(OrderStatus.READY_FOR_DELIVERY); 
             } else if (newGarmentStatus == GarmentStatus.DROPPED_AT_STORE) {
                 order.setStatus(OrderStatus.RECEIVED_AT_STORE_AFTER_PROCESSING);
+            } else if (newGarmentStatus == GarmentStatus.READY_FOR_DELIVERY) {
+                order.setStatus(OrderStatus.READY_FOR_DELIVERY);
+            } else if (newGarmentStatus == GarmentStatus.READY_FOR_CUSTOMER_PICKUP) {
+                order.setStatus(OrderStatus.READY_FOR_CUSTOMER_PICKUP);
             }
             orderRepository.save(order);
         }
@@ -425,5 +440,186 @@ public class GarmentTrackingServiceImpl implements GarmentTrackingService {
         );
 
         return map(saved);
+    }
+
+    @Override
+    public List<TruckRouteResponse> getTruckPickupRoutes() {
+        List<Garment> fromStore = garmentRepository.findByStatus(GarmentStatus.TAGGED_AT_STORE);
+        List<Garment> fromHq = garmentRepository.findByStatus(GarmentStatus.PROCESSED_QR_REATTACHED);
+        
+        List<TruckRouteResponse> storeRoutes = groupGarmentsByStore(fromStore, "PICKUP_FROM_STORE");
+        List<TruckRouteResponse> hqRoutes = groupGarmentsByStore(fromHq, "PICKUP_FROM_HQ");
+        
+        List<TruckRouteResponse> allRoutes = new ArrayList<>();
+        allRoutes.addAll(storeRoutes);
+        allRoutes.addAll(hqRoutes);
+        return allRoutes;
+    }
+
+    @Override
+    public List<TruckRouteResponse> getTruckDropRoutes() {
+        List<Garment> forStore = garmentRepository.findByStatus(GarmentStatus.LOADED_FOR_STORE);
+        List<Garment> forHq = garmentRepository.findByStatus(GarmentStatus.LOADED_FOR_HQ);
+        
+        List<TruckRouteResponse> storeRoutes = groupGarmentsByStore(forStore, "DROP_AT_STORE");
+        List<TruckRouteResponse> hqRoutes = groupGarmentsByStore(forHq, "DROP_AT_HQ");
+        
+        List<TruckRouteResponse> allRoutes = new ArrayList<>();
+        allRoutes.addAll(storeRoutes);
+        allRoutes.addAll(hqRoutes);
+        return allRoutes;
+    }
+
+    @Override
+    public List<TrackingHistoryResponse> getTruckHistory(String date, String role) {
+        // Find history records performed by TRUCK_DRIVER on the specific date
+        // Note: simplified to return all history for that role for now
+        List<GarmentTrackingHistory> histories = historyRepository.findAll().stream()
+                .filter(h -> h.getRemarks() != null && h.getRemarks().contains(role))
+                .toList();
+
+        return histories.stream()
+                .map(h -> TrackingHistoryResponse.builder()
+                        .status(h.getStatus())
+                        .remarks(h.getRemarks())
+                        .createdAt(h.getCreatedAt())
+                        .itemName(h.getGarment().getItemName())
+                        .storeQrCode(h.getGarment().getStoreQrCode())
+                        .storeName(h.getGarment().getOrder().getStore().getName())
+                        .build())
+                .toList();
+    }
+
+    @Override
+    public List<GarmentResponse> approveStoreDrops(UUID storeId) {
+        List<Garment> dropped = garmentRepository.findByStatus(GarmentStatus.DROPPED_AT_STORE).stream()
+                .filter(g -> g.getOrder().getStore().getId().equals(storeId))
+                .toList();
+
+        List<GarmentResponse> responses = new ArrayList<>();
+        for (Garment garment : dropped) {
+            GarmentStatus newStatus = GarmentStatus.READY_FOR_DELIVERY;
+            
+            garment.setStatus(newStatus);
+            Garment saved = garmentRepository.save(garment);
+            saveHistory(saved, newStatus, "Store approved drop");
+            responses.add(map(saved));
+        }
+        return responses;
+    }
+
+    private List<TruckRouteResponse> groupGarmentsByStore(List<Garment> garments, String routeType) {
+        java.util.Map<com.example.whitefox.store.entity.Store, List<Garment>> byStore = new java.util.HashMap<>();
+        for (Garment g : garments) {
+            com.example.whitefox.store.entity.Store s = g.getOrder().getStore();
+            byStore.computeIfAbsent(s, k -> new ArrayList<>()).add(g);
+        }
+
+        List<TruckRouteResponse> responses = new ArrayList<>();
+        for (java.util.Map.Entry<com.example.whitefox.store.entity.Store, List<Garment>> entry : byStore.entrySet()) {
+            responses.add(new TruckRouteResponse(
+                    mapStore(entry.getKey()),
+                    routeType,
+                    entry.getValue().stream().map(this::map).toList()
+            ));
+        }
+        return responses;
+    }
+
+    private com.example.whitefox.store.dto.StoreResponse mapStore(com.example.whitefox.store.entity.Store store) {
+        if (store == null) return null;
+        return com.example.whitefox.store.dto.StoreResponse.builder()
+                .id(store.getId())
+                .name(store.getName())
+                .address(store.getAddress())
+                // Assuming phone is available. Let's just map the basics.
+                .build();
+    }
+
+    @Override
+    public List<GarmentResponse> pickupStore(UUID storeId) {
+        List<Garment> fromStore = garmentRepository.findByStatus(GarmentStatus.TAGGED_AT_STORE).stream()
+                .filter(g -> g.getOrder().getStore().getId().equals(storeId))
+                .toList();
+        List<Garment> fromHq = garmentRepository.findByStatus(GarmentStatus.PROCESSED_QR_REATTACHED).stream()
+                .filter(g -> g.getOrder().getStore().getId().equals(storeId))
+                .toList();
+                
+        List<GarmentResponse> responses = new ArrayList<>();
+        for (Garment g : fromStore) {
+            g.setStatus(GarmentStatus.LOADED_FOR_HQ);
+            Garment saved = garmentRepository.save(g);
+            saveHistory(saved, GarmentStatus.LOADED_FOR_HQ, "Picked up from store by truck");
+            responses.add(map(saved));
+        }
+        for (Garment g : fromHq) {
+            g.setStatus(GarmentStatus.LOADED_FOR_STORE);
+            Garment saved = garmentRepository.save(g);
+            saveHistory(saved, GarmentStatus.LOADED_FOR_STORE, "Picked up from HQ by truck");
+            responses.add(map(saved));
+        }
+        return responses;
+    }
+
+    @Override
+    public List<GarmentResponse> dropHq() {
+        List<Garment> loadedForHq = garmentRepository.findByStatus(GarmentStatus.LOADED_FOR_HQ);
+        List<GarmentResponse> responses = new ArrayList<>();
+        
+        for (Garment g : loadedForHq) {
+            g.setStatus(GarmentStatus.DROPPED_AT_HQ);
+            Garment saved = garmentRepository.save(g);
+            saveHistory(saved, GarmentStatus.DROPPED_AT_HQ, "Dropped at HQ by truck driver");
+            responses.add(map(saved));
+        }
+        
+        if (!responses.isEmpty()) {
+            com.example.whitefox.realtime.dto.RealtimeEvent event = com.example.whitefox.realtime.dto.RealtimeEvent.builder()
+                    .type("TRUCK_DROP_AT_HQ")
+                    .title("New Garments Dropped at HQ")
+                    .message(responses.size() + " garments were dropped at HQ. Please verify and approve.")
+                    .build();
+            realtimeEventService.sendToAdmin(event);
+        }
+        
+        return responses;
+    }
+
+    @Override
+    public List<GarmentResponse> approveDrop() {
+        List<Garment> droppedAtHq = garmentRepository.findByStatus(GarmentStatus.DROPPED_AT_HQ);
+        List<GarmentResponse> responses = new ArrayList<>();
+        
+        for (Garment g : droppedAtHq) {
+            g.setStatus(GarmentStatus.RECEIVED_AT_HQ);
+            Garment saved = garmentRepository.save(g);
+            saveHistory(saved, GarmentStatus.RECEIVED_AT_HQ, "Garment received at HQ");
+            checkAndUpdateOrderStatus(g.getOrder(), GarmentStatus.RECEIVED_AT_HQ);
+            responses.add(map(saved));
+        }
+        return responses;
+    }
+
+    @Override
+    public List<GarmentResponse> getDispatchedHistory(String dateStr) {
+        List<GarmentStatus> statuses = List.of(
+            GarmentStatus.LOADED_FOR_STORE,
+            GarmentStatus.DROPPED_AT_STORE,
+            GarmentStatus.READY_FOR_DELIVERY,
+            GarmentStatus.OUT_FOR_DELIVERY,
+            GarmentStatus.DELIVERED
+        );
+        
+        List<Garment> allDispatched = garmentRepository.findByStatusIn(statuses);
+        
+        if (dateStr == null || dateStr.isEmpty()) {
+            dateStr = java.time.LocalDate.now().toString();
+        }
+        
+        final String targetDate = dateStr;
+        return allDispatched.stream()
+                .filter(g -> g.getUpdatedAt() != null && g.getUpdatedAt().toLocalDate().toString().equals(targetDate))
+                .map(this::map)
+                .toList();
     }
 }

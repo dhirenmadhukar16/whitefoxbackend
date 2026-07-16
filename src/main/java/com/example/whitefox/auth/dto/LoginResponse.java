@@ -18,4 +18,6 @@ public class LoginResponse {
     private UUID storeId;
 
     private UUID userId;
+
+    private boolean isNewUser;
 }

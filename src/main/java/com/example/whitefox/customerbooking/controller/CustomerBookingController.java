@@ -93,6 +93,17 @@ public class CustomerBookingController {
     ) {
         return customerBookingService.cancelBooking(bookingId);
     }
+    
+    @PatchMapping("/{bookingId}/reject-by-store")
+    public CustomerBookingResponse rejectStoreAssignment(
+            @PathVariable UUID bookingId,
+            @RequestBody RejectBookingRequest request
+    ) {
+        return customerBookingService.rejectStoreAssignment(
+                bookingId,
+                request
+        );
+    }
     @PatchMapping("/{bookingId}/reschedule")
     public CustomerBookingResponse rescheduleBooking(
             @PathVariable UUID bookingId,

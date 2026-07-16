@@ -25,4 +25,6 @@ public interface StoreAppService {
     CustomerBookingResponse assignRiderToBooking(UUID bookingId, UUID riderId);
 
     OrderResponse assignDeliveryRiderToOrder(UUID orderId, UUID riderId);
+
+    void resetRiderPassword(UUID storeId, UUID riderId, String newPassword);
 }

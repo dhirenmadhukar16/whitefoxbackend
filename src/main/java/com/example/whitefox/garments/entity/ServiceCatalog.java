@@ -21,8 +21,12 @@ public class ServiceCatalog {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false)
-    private String serviceType;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id", nullable = false)
+    private ServiceCategory category;
+
+    @Column(length = 1000)
+    private String thumbnailUrl;
 
     @Column(nullable = false)
     private String itemName;

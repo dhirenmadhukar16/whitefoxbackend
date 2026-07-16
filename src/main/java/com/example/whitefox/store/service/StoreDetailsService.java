@@ -11,6 +11,8 @@ import com.example.whitefox.store.repository.StoreFinanceRecordRepository;
 import com.example.whitefox.store.repository.StoreInventoryItemRepository;
 import com.example.whitefox.storeemployee.entity.StoreEmployee;
 import com.example.whitefox.storeemployee.repository.StoreEmployeeRepository;
+import com.example.whitefox.riders.entity.Rider;
+import com.example.whitefox.riders.repository.RiderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +28,7 @@ public class StoreDetailsService {
     private final StoreEmployeeRepository employeeRepository;
     private final StoreInventoryItemRepository inventoryRepository;
     private final StoreFinanceRecordRepository financeRepository;
+    private final RiderRepository riderRepository;
 
     public List<LaundryOrder> getStoreOrders(UUID storeId) {
         return orderRepository.findByStoreId(storeId);
@@ -33,7 +36,7 @@ public class StoreDetailsService {
 
     public List<StoreEmployeeDTO> getStoreEmployees(UUID storeId) {
         List<StoreEmployee> employees = employeeRepository.findByStoreId(storeId);
-        return employees.stream().map(emp -> StoreEmployeeDTO.builder()
+        List<StoreEmployeeDTO> dtos = employees.stream().map(emp -> StoreEmployeeDTO.builder()
                 .id(emp.getId())
                 .name(emp.getName())
                 .role(emp.getRole() != null ? emp.getRole().name() : "STAFF")
@@ -43,6 +46,21 @@ public class StoreDetailsService {
                 .joinedAt(emp.getCreatedAt())
                 .build()
         ).collect(Collectors.toList());
+
+        List<Rider> riders = riderRepository.findByStoreId(storeId);
+        List<StoreEmployeeDTO> riderDtos = riders.stream().map(rider -> StoreEmployeeDTO.builder()
+                .id(rider.getId())
+                .name(rider.getName())
+                .role("RIDER")
+                .status(rider.getStatus() != null ? rider.getStatus().name() : "ACTIVE")
+                .email(rider.getEmail())
+                .phone(rider.getPhone())
+                .joinedAt(rider.getCreatedAt())
+                .build()
+        ).collect(Collectors.toList());
+
+        dtos.addAll(riderDtos);
+        return dtos;
     }
 
     public List<StoreInventoryDTO> getStoreInventory(UUID storeId) {
@@ -96,6 +114,12 @@ public class StoreDetailsService {
         
         double totalRevenue = orders.stream().mapToDouble(o -> o.getSubtotal() != null ? o.getSubtotal() : 0.0).sum();
         reports.put("totalRevenue", totalRevenue);
+        
+        int performanceScore = 0;
+        if (!orders.isEmpty()) {
+            performanceScore = (int) (((double) completedOrders / orders.size()) * 100);
+        }
+        reports.put("performanceScore", performanceScore);
         
         return reports;
     }

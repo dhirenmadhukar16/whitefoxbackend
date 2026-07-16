@@ -50,6 +50,7 @@ public class StoreServiceImpl implements StoreService {
         Store store = Store.builder()
                 .storeCode(request.getStoreCode())
                 .name(request.getName())
+                .storeAdminName(request.getStoreAdminName())
                 .phone(request.getPhone())
                 .email(request.getEmail())
                 .address(request.getAddress())
@@ -61,7 +62,7 @@ public class StoreServiceImpl implements StoreService {
         storeRepository.save(store);
 
         User user = User.builder()
-                .firstName(request.getName())
+                .firstName(request.getStoreAdminName() != null ? request.getStoreAdminName() : request.getName())
                 .lastName("Store")
                 .email(request.getEmail())
                 .phone(request.getPhone())
@@ -104,11 +105,14 @@ public class StoreServiceImpl implements StoreService {
                 .id(store.getId())
                 .storeCode(store.getStoreCode())
                 .name(store.getName())
+                .storeAdminName(store.getStoreAdminName())
                 .phone(store.getPhone())
                 .email(store.getEmail())
                 .loginEmail(loginEmail)
                 .address(store.getAddress())
                 .city(store.getCity())
+                .latitude(store.getLatitude())
+                .longitude(store.getLongitude())
                 .active(store.getActive())
                 .build();
     }
@@ -122,6 +126,7 @@ public class StoreServiceImpl implements StoreService {
                         new RuntimeException("Store not found"));
 
         store.setName(request.getName());
+        store.setStoreAdminName(request.getStoreAdminName());
         store.setPhone(request.getPhone());
         store.setEmail(request.getEmail());
         store.setAddress(request.getAddress());
@@ -130,6 +135,14 @@ public class StoreServiceImpl implements StoreService {
         store.setLongitude(request.getLongitude());
 
         Store saved = storeRepository.save(store);
+
+        // Sync user details
+        userRepository.findFirstByStoreId(saved.getId()).ifPresent(user -> {
+            user.setFirstName(request.getStoreAdminName() != null ? request.getStoreAdminName() : request.getName());
+            user.setPhone(request.getPhone());
+            user.setEmail(request.getEmail());
+            userRepository.save(user);
+        });
 
         return map(saved);
     }

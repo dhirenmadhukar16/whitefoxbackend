@@ -23,6 +23,12 @@ import com.example.whitefox.orders.enums.OrderStatus;
 import com.example.whitefox.pickupbill.entity.PickupBill;
 import com.example.whitefox.pickupbill.entity.PickupBillItem;
 import com.example.whitefox.pickupbill.repository.PickupBillItemRepository;
+import com.example.whitefox.payment.entity.Payment;
+import com.example.whitefox.payment.enums.PaymentTransactionStatus;
+import com.example.whitefox.payment.enums.PaymentMode;
+import com.example.whitefox.payment.repository.PaymentRepository;
+import com.example.whitefox.customeraddress.entity.CustomerAddress;
+import com.example.whitefox.customeraddress.repository.CustomerAddressRepository;
 import java.util.List;
 import java.util.UUID;
 
@@ -36,6 +42,9 @@ public class OrderServiceImpl implements OrderService {
     private final StoreRepository storeRepository;
     private final ServiceCatalogRepository serviceCatalogRepository;
     private final PickupBillItemRepository pickupBillItemRepository;
+    private final PaymentRepository paymentRepository;
+    private final CustomerAddressRepository customerAddressRepository;
+    private final com.example.whitefox.tracking.repository.GarmentRepository garmentRepository;
 
     @Override
     @Transactional
@@ -61,6 +70,7 @@ public class OrderServiceImpl implements OrderService {
                 .orderNumber(generateOrderNumber())
                 .pickupDate(request.getPickupDate())
                 .deliveryDate(request.getDeliveryDate())
+                .deliveryType(request.getDeliveryType() != null && request.getDeliveryType().equals("SELF_PICKUP") ? com.example.whitefox.orders.enums.DeliveryType.SELF_PICKUP : com.example.whitefox.orders.enums.DeliveryType.RIDER_DELIVERY)
                 .build();
 
         orderRepository.save(order);
@@ -86,7 +96,7 @@ public class OrderServiceImpl implements OrderService {
             OrderItem item = OrderItem.builder()
                     .order(order)
                     .serviceCatalog(catalog)
-                    .serviceType(catalog.getServiceType())
+                    .serviceType(catalog.getCategory() != null ? catalog.getCategory().getName() : null)
                     .itemName(catalog.getItemName())
                     .quantity(itemRequest.getQuantity())
                     .unitPrice(catalog.getPrice())
@@ -115,6 +125,21 @@ public class OrderServiceImpl implements OrderService {
 
         Store finalStore = pickupBill.getStore();
 
+        com.example.whitefox.customerbooking.entity.CustomerBooking booking = pickupBill.getCustomerBooking();
+        com.example.whitefox.orders.enums.DeliveryType deliveryType = com.example.whitefox.orders.enums.DeliveryType.RIDER_DELIVERY;
+        double paidAmount = 0.0;
+        
+        if (booking != null) {
+            if (booking.getDeliveryType() != null) {
+                try {
+                    deliveryType = com.example.whitefox.orders.enums.DeliveryType.valueOf(booking.getDeliveryType());
+                } catch (Exception e) {}
+            }
+            if (booking.getAmountPaid() != null) {
+                paidAmount = booking.getAmountPaid();
+            }
+        }
+
         LaundryOrder order = LaundryOrder.builder()
                 .customer(pickupBill.getCustomer())
                 .store(finalStore)
@@ -125,9 +150,26 @@ public class OrderServiceImpl implements OrderService {
                 .subtotal(pickupBill.getSubtotal())
                 .gst(pickupBill.getGst())
                 .totalAmount(pickupBill.getTotalAmount())
+                .paidAmount(paidAmount)
+                .remainingAmount(pickupBill.getTotalAmount() - paidAmount)
+                .deliveryType(deliveryType)
+                .paymentStatus(paidAmount >= pickupBill.getTotalAmount() ? com.example.whitefox.orders.enums.PaymentStatus.PAID : (paidAmount > 0 ? com.example.whitefox.orders.enums.PaymentStatus.PARTIAL : com.example.whitefox.orders.enums.PaymentStatus.UNPAID))
                 .build();
 
         LaundryOrder savedOrder = orderRepository.save(order);
+
+        if (paidAmount > 0) {
+            Payment payment = Payment.builder()
+                    .order(savedOrder)
+                    .store(savedOrder.getStore())
+                    .amount(paidAmount)
+                    .paymentMode(booking != null && booking.getPaymentMode() != null ? PaymentMode.valueOf(booking.getPaymentMode()) : PaymentMode.ONLINE)
+                    .status(PaymentTransactionStatus.SUCCESS)
+                    .remarks("Advance Payment via Booking")
+                    .paidAt(java.time.LocalDateTime.now())
+                    .build();
+            paymentRepository.save(payment);
+        }
 
         List<PickupBillItem> pickupItems =
                 pickupBillItemRepository.findByPickupBillId(pickupBill.getId());
@@ -189,11 +231,26 @@ public class OrderServiceImpl implements OrderService {
                         )
                         .toList();
 
+        String deliveryAddress = null;
+        List<CustomerAddress> addresses = customerAddressRepository.findByCustomerId(order.getCustomer().getId());
+        if (!addresses.isEmpty()) {
+            CustomerAddress defaultAddr = addresses.stream()
+                    .filter(a -> Boolean.TRUE.equals(a.getDefaultAddress()))
+                    .findFirst()
+                    .orElse(addresses.get(0));
+            deliveryAddress = defaultAddr.getAddressLine() + 
+                              (defaultAddr.getLandmark() != null && !defaultAddr.getLandmark().trim().isEmpty() ? ", " + defaultAddr.getLandmark() : "") + 
+                              (defaultAddr.getCity() != null ? ", " + defaultAddr.getCity() : "");
+        } else if (order.getCustomer().getAddress() != null) {
+            deliveryAddress = order.getCustomer().getAddress();
+        }
+
         return OrderResponse.builder()
                 .id(order.getId())
                 .orderNumber(order.getOrderNumber())
                 .customerId(order.getCustomer().getId())
                 .customerName(order.getCustomer().getName())
+                .customerPhone(order.getCustomer().getPhone())
                 .storeId(order.getStore().getId())
                 .storeName(order.getStore().getName())
                 .status(order.getStatus())
@@ -201,7 +258,55 @@ public class OrderServiceImpl implements OrderService {
                 .subtotal(order.getSubtotal())
                 .gst(order.getGst())
                 .totalAmount(order.getTotalAmount())
+                .deliveryType(order.getDeliveryType() != null ? order.getDeliveryType().name() : null)
+                .deliveryAddress(deliveryAddress)
                 .items(items)
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public OrderResponse changeDeliveryType(UUID orderId, String deliveryType) {
+        LaundryOrder order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+        
+        try {
+            com.example.whitefox.orders.enums.DeliveryType newType = com.example.whitefox.orders.enums.DeliveryType.valueOf(deliveryType.toUpperCase());
+            order.setDeliveryType(newType);
+            
+            if (newType == com.example.whitefox.orders.enums.DeliveryType.SELF_PICKUP) {
+                if (order.getStatus() == OrderStatus.READY_FOR_DELIVERY) {
+                    order.setStatus(OrderStatus.READY_FOR_CUSTOMER_PICKUP);
+                    if (order.getDeliveryOtp() == null || order.getDeliveryOtp().isEmpty()) {
+                        order.setDeliveryOtp(String.format("%04d", new java.util.Random().nextInt(10000)));
+                    }
+                    
+                    List<com.example.whitefox.tracking.entity.Garment> garments = garmentRepository.findByOrderId(orderId);
+                    for (com.example.whitefox.tracking.entity.Garment g : garments) {
+                        if (g.getStatus() == com.example.whitefox.tracking.enums.GarmentStatus.READY_FOR_DELIVERY) {
+                            g.setStatus(com.example.whitefox.tracking.enums.GarmentStatus.READY_FOR_CUSTOMER_PICKUP);
+                            garmentRepository.save(g);
+                        }
+                    }
+                }
+            } else if (newType == com.example.whitefox.orders.enums.DeliveryType.RIDER_DELIVERY) {
+                if (order.getStatus() == OrderStatus.READY_FOR_CUSTOMER_PICKUP) {
+                    order.setStatus(OrderStatus.READY_FOR_DELIVERY);
+                    
+                    List<com.example.whitefox.tracking.entity.Garment> garments = garmentRepository.findByOrderId(orderId);
+                    for (com.example.whitefox.tracking.entity.Garment g : garments) {
+                        if (g.getStatus() == com.example.whitefox.tracking.enums.GarmentStatus.READY_FOR_CUSTOMER_PICKUP) {
+                            g.setStatus(com.example.whitefox.tracking.enums.GarmentStatus.READY_FOR_DELIVERY);
+                            garmentRepository.save(g);
+                        }
+                    }
+                }
+            }
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Invalid delivery type");
+        }
+        
+        LaundryOrder saved = orderRepository.save(order);
+        return map(saved);
     }
 }

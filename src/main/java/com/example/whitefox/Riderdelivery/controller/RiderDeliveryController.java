@@ -5,6 +5,7 @@ package com.example.whitefox.Riderdelivery.controller;
 import com.example.whitefox.customerbooking.dto.CustomerBookingResponse;
 import com.example.whitefox.orders.dto.OrderResponse;
 import com.example.whitefox.Riderdelivery.service.RiderDeliveryService;
+import com.example.whitefox.Riderdelivery.dto.VerifyOtpRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import com.example.whitefox.customerbooking.service.CustomerBookingService;
@@ -52,6 +53,14 @@ public class RiderDeliveryController {
             @PathVariable UUID orderId
     ) {
         return riderDeliveryService.markDeliveryFailed(orderId);
+    }
+
+    @PostMapping("/orders/{orderId}/verify-otp")
+    public OrderResponse verifyOtp(
+            @PathVariable UUID orderId,
+            @RequestBody VerifyOtpRequest request
+    ) {
+        return riderDeliveryService.verifyOtp(orderId, request);
     }
 
 }

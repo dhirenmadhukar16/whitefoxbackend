@@ -87,6 +87,8 @@ public class PickupBill {
 
     private LocalDateTime updatedAt;
 
+    private String rejectionReason;
+
     @PrePersist
     public void prePersist() {
 

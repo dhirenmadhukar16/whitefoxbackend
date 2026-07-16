@@ -22,6 +22,8 @@ public class OrderResponse {
 
     private String customerName;
 
+    private String customerPhone;
+
     private UUID storeId;
 
     private String storeName;
@@ -35,6 +37,10 @@ public class OrderResponse {
     private Double gst;
 
     private Double totalAmount;
+
+    private String deliveryType;
+
+    private String deliveryAddress;
 
     private List<OrderItemResponse> items;
 }

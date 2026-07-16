@@ -5,13 +5,18 @@ package com.example.whitefox.garments.service;
 import com.example.whitefox.garments.dto.CreateServiceCatalogRequest;
 import com.example.whitefox.garments.dto.ServiceCatalogResponse;
 
+import com.example.whitefox.garments.dto.CreateServiceCategoryRequest;
+import com.example.whitefox.garments.dto.ServiceCategoryResponse;
+
 import java.util.List;
 import java.util.UUID;
 
 public interface ServiceCatalogService {
 
-    ServiceCatalogResponse create(
-            CreateServiceCatalogRequest request);
+    ServiceCategoryResponse createCategory(CreateServiceCategoryRequest request);
+    List<ServiceCategoryResponse> getAllCategories();
+
+    ServiceCatalogResponse create(CreateServiceCatalogRequest request);
 
     List<ServiceCatalogResponse> getAll();
 
@@ -22,4 +27,6 @@ public interface ServiceCatalogService {
             CreateServiceCatalogRequest request);
 
     void deactivate(UUID id);
+
+    void delete(UUID id);
 }

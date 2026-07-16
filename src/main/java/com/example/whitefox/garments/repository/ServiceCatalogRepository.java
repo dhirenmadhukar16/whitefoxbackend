@@ -15,9 +15,7 @@ public interface ServiceCatalogRepository
 
     List<ServiceCatalog> findByActiveTrue();
 
-    List<ServiceCatalog> findByServiceTypeAndActiveTrue(
-            String serviceType
-    );
+
     Optional<ServiceCatalog> findById(UUID id);
 //    boolean existsByCode(String code);
 }

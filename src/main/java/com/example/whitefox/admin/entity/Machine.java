@@ -5,7 +5,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Entity
+@Entity(name = "AdminMachine")
 @Table(name = "store_machines")
 @Getter
 @Setter
@@ -17,6 +17,7 @@ public class Machine {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(name = "store_id")
     private UUID storeId;
 
     private String machineType; // WASHER, DRYER, IRON

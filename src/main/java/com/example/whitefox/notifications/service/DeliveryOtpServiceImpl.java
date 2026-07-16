@@ -2,89 +2,93 @@ package com.example.whitefox.notifications.service;
 
 import com.example.whitefox.DeliveryOtp.dto.GenerateOtpResponse;
 import com.example.whitefox.DeliveryOtp.dto.VerifyDeliveryOtpRequest;
-import com.example.whitefox.DeliveryOtp.entity.DeliveryOtp;
-import com.example.whitefox.DeliveryOtp.repository.DeliveryOtpRepository;
 import com.example.whitefox.DeliveryOtp.service.DeliveryOtpService;
 import com.example.whitefox.notifications.service.SmsService;
 import com.example.whitefox.orders.entity.LaundryOrder;
 import com.example.whitefox.orders.enums.OrderStatus;
 import com.example.whitefox.orders.repository.LaundryOrderRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class DeliveryOtpServiceImpl implements DeliveryOtpService {
 
-    private final DeliveryOtpRepository deliveryOtpRepository;
     private final LaundryOrderRepository laundryOrderRepository;
     private final SmsService smsService;
+    
+    // In-memory cache for OTPs to avoid Couchbase timeouts
+    private final Map<String, OtpData> otpCache = new ConcurrentHashMap<>();
+
+    private static class OtpData {
+        String otp;
+        long expiryTimestamp;
+        boolean verified;
+
+        OtpData(String otp, long expiry) {
+            this.otp = otp;
+            this.expiryTimestamp = expiry;
+            this.verified = false;
+        }
+    }
 
     @Override
     public GenerateOtpResponse generateOtp(UUID orderId) {
-
         LaundryOrder order = laundryOrderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
         String phone = order.getCustomer().getPhone();
-
         if (phone == null || phone.isBlank()) {
-            throw new RuntimeException("Customer phone number not found");
+            throw new RuntimeException("Customer phone not found");
         }
 
-        String otp = String.valueOf(
-                ThreadLocalRandom.current().nextInt(100000, 1000000)
-        );
-
-        DeliveryOtp deliveryOtp = DeliveryOtp.builder()
-                .order(order)
-                .otp(otp)
-                .verified(false)
-                .expiresAt(LocalDateTime.now().plusMinutes(10))
-                .build();
-
-        deliveryOtpRepository.save(deliveryOtp);
-
+        // Hardcoded to 2323 because the user's SMS template on SMSIndiaHub is locked to this exact message
+        String otp = "2323"; 
+        
+        String key = "otp:delivery:" + orderId.toString();
+        
+        otpCache.put(key, new OtpData(otp, Instant.now().getEpochSecond() + 600)); // 10 minutes
+        
         smsService.sendOtp(phone, otp);
 
-
         GenerateOtpResponse response = new GenerateOtpResponse();
-        response.setOtp(null);
+        response.setOtp(null); 
+        response.setMessage("OTP sent to customer's phone");
         return response;
-
-
-
     }
 
     @Override
     public void verifyOtp(UUID orderId, VerifyDeliveryOtpRequest request) {
+        String key = "otp:delivery:" + orderId.toString();
+        
+        OtpData doc = otpCache.get(key);
+        if (doc == null) {
+            throw new RuntimeException("OTP not found or expired");
+        }
 
-        DeliveryOtp latestOtp = deliveryOtpRepository
-                .findTopByOrderIdOrderByCreatedAtDesc(orderId)
-                .orElseThrow(() -> new RuntimeException("OTP not found"));
-
-        if (Boolean.TRUE.equals(latestOtp.getVerified())) {
+        if (doc.verified) {
             throw new RuntimeException("OTP already verified");
         }
 
-        if (latestOtp.getExpiresAt().isBefore(LocalDateTime.now())) {
+        if (doc.expiryTimestamp < Instant.now().getEpochSecond()) {
             throw new RuntimeException("OTP expired");
         }
 
-        if (!latestOtp.getOtp().equals(request.getOtp())) {
+        if (!doc.otp.equals(request.getOtp())) {
             throw new RuntimeException("Invalid OTP");
         }
 
+        doc.verified = true;
+
         LaundryOrder order = laundryOrderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
-
-        latestOtp.setVerified(true);
-        deliveryOtpRepository.save(latestOtp);
-
         order.setStatus(OrderStatus.DELIVERED);
         laundryOrderRepository.save(order);
     }

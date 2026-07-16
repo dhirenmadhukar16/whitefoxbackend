@@ -12,15 +12,13 @@ import java.util.UUID;
 
 public interface RiderService {
 
-    RiderResponse createRider(CreateRiderRequest request);
+    // Rider creation and modification removed from HQ/Admin
+    RiderResponse getMe(String email);
+    RiderResponse updateMe(String email, CompleteRiderProfileRequest request);
 
     List<RiderResponse> getAllRiders();
 
-
     RiderResponse getRider(UUID id);
-    RiderResponse getMe(String email);
-
-    RiderResponse updateRider(UUID id, CreateRiderRequest request);
 
     RiderResponse updateStatus(UUID id, UpdateRiderStatusRequest request);
 

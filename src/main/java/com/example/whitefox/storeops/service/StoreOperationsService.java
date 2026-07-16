@@ -21,11 +21,23 @@ public interface StoreOperationsService {
 
     StoreOrderSummaryResponse markReadyForCustomerPickup(UUID orderId);
 
+    StoreOrderSummaryResponse verifyPickupOtp(UUID orderId, String otp);
+
     StoreOrderSummaryResponse markOutForDelivery(UUID orderId);
 
     StoreOrderSummaryResponse markDelivered(UUID orderId);
 
     List<StoreServicePricingDto> getStorePricing(UUID storeId);
 
-    StoreServicePricingDto setStorePricing(UUID storeId, SetStorePricingRequest request);
+    StoreServicePricingDto setStorePricing(UUID storeId, com.example.whitefox.storeops.dto.SetStorePricingRequest request);
+
+    StoreOrderSummaryResponse settleCash(UUID orderId);
+
+    StoreOrderSummaryResponse settleOnlinePayment(UUID orderId);
+
+    List<com.example.whitefox.riders.dto.RiderResponse> getPendingRiders(UUID storeId);
+
+    com.example.whitefox.riders.dto.RiderResponse approveRider(UUID riderId);
+
+    com.example.whitefox.riders.dto.RiderResponse rejectRider(UUID riderId);
 }

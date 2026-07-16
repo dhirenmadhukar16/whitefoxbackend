@@ -1,6 +1,7 @@
 package com.example.whitefox.riders.entity;
 
 import com.example.whitefox.riders.enums.RiderStatus;
+import com.example.whitefox.store.entity.Store;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -30,6 +31,12 @@ public class Rider {
     private String phone;
 
     private String email;
+
+    private String whatsappNumber;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_id")
+    private Store store;
 
     private String vehicleNumber;
 

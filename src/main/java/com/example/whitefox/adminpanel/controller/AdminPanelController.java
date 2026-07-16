@@ -31,6 +31,14 @@ public class AdminPanelController {
     public List<AdminStoreStatsResponse> getStoreStats() {
         return adminPanelService.getStoreStats();
     }
+    
+    @GetMapping("/stores/{id}/analytics")
+    public AdminStoreAnalyticsResponse getStoreAnalytics(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "30") int days
+    ) {
+        return adminPanelService.getStoreAnalytics(id, days);
+    }
     @GetMapping("/riders/stats")
     public List<AdminRiderStatsResponse> getRiderStats() {
         return adminPanelService.getRiderStats();

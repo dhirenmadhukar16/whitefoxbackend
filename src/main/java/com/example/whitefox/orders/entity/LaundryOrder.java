@@ -5,6 +5,7 @@ package com.example.whitefox.orders.entity;
 import com.example.whitefox.customers.entity.Customer;
 import com.example.whitefox.orders.enums.OrderStatus;
 import com.example.whitefox.orders.enums.PaymentStatus;
+import com.example.whitefox.orders.enums.DeliveryType;
 import com.example.whitefox.riders.entity.Rider;
 import com.example.whitefox.store.entity.Store;
 import jakarta.persistence.*;
@@ -45,6 +46,8 @@ public class LaundryOrder {
     @Enumerated(EnumType.STRING)
     private PaymentStatus paymentStatus;
 
+    private String paymentMethod;
+
     private Double subtotal;
 
     private Double gst;
@@ -66,6 +69,15 @@ public class LaundryOrder {
     @JoinColumn(name = "delivery_rider_id")
     private Rider deliveryRider;
 
+    @Enumerated(EnumType.STRING)
+    private DeliveryType deliveryType;
+
+    private String pickupType;
+
+    private String deliveryOtp;
+
+    private String pickupOtp;
+
     @PrePersist
     public void prePersist() {
         status = OrderStatus.CREATED;
@@ -74,6 +86,9 @@ public class LaundryOrder {
         updatedAt = LocalDateTime.now();
         paidAmount = 0.0;
         remainingAmount = totalAmount != null ? totalAmount : 0.0;
+        if (deliveryType == null) {
+            deliveryType = DeliveryType.RIDER_DELIVERY;
+        }
     }
 
     @PreUpdate

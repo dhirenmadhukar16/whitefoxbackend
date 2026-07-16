@@ -96,6 +96,20 @@ public class CustomerAppController {
                 .toList();
     }
 
+    @GetMapping("/stores/nearest")
+    public StoreResponse getNearestStore(
+            @RequestParam Double latitude,
+            @RequestParam Double longitude
+    ) {
+        return storeService.getAllStores()
+                .stream()
+                .filter(store -> distance(latitude, longitude, store.getLatitude(), store.getLongitude()) <= 10.0)
+                .min(Comparator.comparingDouble(store ->
+                        distance(latitude, longitude, store.getLatitude(), store.getLongitude())
+                ))
+                .orElse(null);
+    }
+
     private double distance(
             double lat1,
             double lon1,

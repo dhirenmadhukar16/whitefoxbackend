@@ -23,5 +23,11 @@ public class CreateCustomerBookingRequest {
 
     private String specialInstructions;
 
+    private String deliveryType;
+
+    private String paymentMode;
+
+    private Double amountPaid;
+
     private List<CreateCustomerBookingItemRequest> items;
 }

@@ -21,6 +21,8 @@ public class CustomerResponse {
 
     private String email;
 
+    private String whatsappNumber;
+
     private String address;
 
     private String city;

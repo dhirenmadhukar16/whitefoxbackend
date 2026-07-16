@@ -23,6 +23,7 @@ public class RiderServiceImpl implements RiderService {
 
     private final RiderRepository riderRepository;
     private final UserRepository userRepository;
+    private final com.example.whitefox.store.repository.StoreRepository storeRepository;
     private final PasswordEncoder passwordEncoder;
 
     private String generateRandomPassword() {
@@ -32,46 +33,7 @@ public class RiderServiceImpl implements RiderService {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes); // Creates an 8-char string
     }
 
-    @Override
-    public RiderResponse createRider(CreateRiderRequest request) {
-
-        String plainPassword = request.getPassword();
-        if (plainPassword == null || plainPassword.trim().isEmpty()) {
-            plainPassword = generateRandomPassword();
-        }
-
-        // Check if user already exists
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new RuntimeException("Email already exists");
-        }
-
-        User user = User.builder()
-                .firstName(request.getName())
-                .lastName("Rider")
-                .email(request.getEmail())
-                .phone(request.getPhone())
-                .password(passwordEncoder.encode(plainPassword))
-                .role("RIDER")
-                .active(true)
-                .build();
-
-        userRepository.save(user);
-
-        Rider rider = Rider.builder()
-                .name(request.getName())
-                .phone(request.getPhone())
-                .email(request.getEmail())
-                .vehicleNumber(request.getVehicleNumber())
-                .latitude(request.getLatitude())
-                .longitude(request.getLongitude())
-                .build();
-
-        Rider saved = riderRepository.save(rider);
-
-        RiderResponse response = map(saved);
-        response.setGeneratedPassword(plainPassword);
-        return response;
-    }
+    // Rider creation and update is now via self-signup and store approval
 
     @Override
     public List<RiderResponse> getAllRiders() {
@@ -90,21 +52,7 @@ public class RiderServiceImpl implements RiderService {
         return map(rider);
     }
 
-    @Override
-    public RiderResponse updateRider(UUID id, CreateRiderRequest request) {
-
-        Rider rider = riderRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Rider not found"));
-
-        rider.setName(request.getName());
-        rider.setPhone(request.getPhone());
-        rider.setEmail(request.getEmail());
-        rider.setVehicleNumber(request.getVehicleNumber());
-        rider.setLatitude(request.getLatitude());
-        rider.setLongitude(request.getLongitude());
-
-        return map(riderRepository.save(rider));
-    }
+    // updateRider removed
 
     @Override
     public RiderResponse updateStatus(UUID id, UpdateRiderStatusRequest request) {
@@ -130,8 +78,31 @@ public class RiderServiceImpl implements RiderService {
 
     @Override
     public RiderResponse getMe(String email) {
-        Rider rider = riderRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Rider not found for email: " + email));
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found for email: " + email));
+        Rider rider = riderRepository.findByPhone(user.getPhone())
+                .orElseThrow(() -> new RuntimeException("Rider not found for phone: " + user.getPhone()));
+        return map(rider);
+    }
+
+    @Override
+    public RiderResponse updateMe(String email, CompleteRiderProfileRequest request) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found for email: " + email));
+        Rider rider = riderRepository.findByPhone(user.getPhone())
+                .orElseThrow(() -> new RuntimeException("Rider not found for phone: " + user.getPhone()));
+
+        rider.setName(request.getName());
+        
+        com.example.whitefox.store.entity.Store store = storeRepository.findById(request.getStoreId())
+                .orElseThrow(() -> new RuntimeException("Store not found"));
+        
+        rider.setStore(store);
+        user.setStoreId(store.getId());
+
+        riderRepository.save(rider);
+        userRepository.save(user);
+
         return map(rider);
     }
 
@@ -145,8 +116,11 @@ public class RiderServiceImpl implements RiderService {
                 .vehicleNumber(rider.getVehicleNumber())
                 .latitude(rider.getLatitude())
                 .longitude(rider.getLongitude())
+                .vehicleNumber(rider.getVehicleNumber())
                 .status(rider.getStatus())
                 .active(rider.getActive())
+                .storeId(rider.getStore() != null ? rider.getStore().getId() : null)
+                .whatsappNumber(rider.getWhatsappNumber())
                 .build();
     }
     @Override

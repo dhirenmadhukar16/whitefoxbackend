@@ -80,6 +80,14 @@ public class StoreOperationsController {
         return storeOperationsService.markReadyForCustomerPickup(orderId);
     }
 
+    @PostMapping("/orders/{orderId}/verify-pickup-otp")
+    public StoreOrderSummaryResponse verifyPickupOtp(
+            @PathVariable UUID orderId,
+            @RequestParam String otp
+    ) {
+        return storeOperationsService.verifyPickupOtp(orderId, otp);
+    }
+
     @PatchMapping("/orders/{orderId}/out-for-delivery")
     public StoreOrderSummaryResponse markOutForDelivery(
             @PathVariable UUID orderId
@@ -107,6 +115,41 @@ public class StoreOperationsController {
             @RequestBody SetStorePricingRequest request
     ) {
         return storeOperationsService.setStorePricing(storeId, request);
+    }
+
+    @PatchMapping("/orders/{orderId}/settle-cash")
+    public StoreOrderSummaryResponse settleCash(
+            @PathVariable UUID orderId
+    ) {
+        return storeOperationsService.settleCash(orderId);
+    }
+
+    @PatchMapping("/orders/{orderId}/settle-online")
+    public StoreOrderSummaryResponse settleOnlinePayment(
+            @PathVariable UUID orderId
+    ) {
+        return storeOperationsService.settleOnlinePayment(orderId);
+    }
+
+    @GetMapping("/stores/{storeId}/riders/pending")
+    public List<com.example.whitefox.riders.dto.RiderResponse> getPendingRiders(
+            @PathVariable UUID storeId
+    ) {
+        return storeOperationsService.getPendingRiders(storeId);
+    }
+
+    @PutMapping("/riders/{riderId}/approve")
+    public com.example.whitefox.riders.dto.RiderResponse approveRider(
+            @PathVariable UUID riderId
+    ) {
+        return storeOperationsService.approveRider(riderId);
+    }
+
+    @PutMapping("/riders/{riderId}/reject")
+    public com.example.whitefox.riders.dto.RiderResponse rejectRider(
+            @PathVariable UUID riderId
+    ) {
+        return storeOperationsService.rejectRider(riderId);
     }
 
     /**

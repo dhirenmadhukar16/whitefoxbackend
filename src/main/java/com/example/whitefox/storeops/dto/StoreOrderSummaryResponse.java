@@ -22,6 +22,10 @@ public class StoreOrderSummaryResponse {
 
     private OrderStatus status;
     private PaymentStatus paymentStatus;
+    private String deliveryType;
+    private String pickupType;
+    private String deliveryOtp;
+    private String pickupOtp;
 
     private Double totalAmount;
 }

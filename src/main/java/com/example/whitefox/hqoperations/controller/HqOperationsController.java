@@ -3,11 +3,16 @@ package com.example.whitefox.hqoperations.controller;
 import com.example.whitefox.hqoperations.dto.AttachHqOutingQrRequest;
 import com.example.whitefox.hqoperations.dto.HqGarmentResponse;
 import com.example.whitefox.hqoperations.dto.HqLiveOperationsResponse;
+import com.example.whitefox.hqoperations.dto.HqReportResponse;
 import com.example.whitefox.hqoperations.dto.HqStoreDispatchGroupResponse;
+import com.example.whitefox.hqoperations.dto.HqStoreDashboardResponse;
+import com.example.whitefox.hqoperations.dto.HqCustomerDashboardResponse;
 import com.example.whitefox.hqoperations.service.HqOperationsService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -110,12 +115,48 @@ public class HqOperationsController {
 
         return hqOperationsService.getTomorrowDispatch();
     }
+
+    @GetMapping("/reports")
+    public HqReportResponse getReports(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
+        if (startDate == null) {
+            startDate = LocalDate.now();
+        }
+        if (endDate == null) {
+            endDate = LocalDate.now();
+        }
+        return hqOperationsService.getHqReport(startDate, endDate);
+    }
+
     @GetMapping("/live-operations")
     public HqLiveOperationsResponse liveOperations() {
         return hqOperationsService.getLiveOperations();
     }
+
     @GetMapping("/dispatch/ready-by-store")
     public List<HqStoreDispatchGroupResponse> readyDispatchByStore() {
         return hqOperationsService.getReadyDispatchGroupedByStore();
+    }
+
+    @GetMapping("/dashboard/upcoming-garments")
+    public List<HqGarmentResponse> upcomingGarments() {
+        return hqOperationsService.getUpcomingGarments();
+    }
+
+    @GetMapping("/dashboard/in-hq-garments")
+    public List<HqGarmentResponse> inHqGarments() {
+        return hqOperationsService.getInHqGarments();
+    }
+
+    @GetMapping("/dashboard/store-wise")
+    public List<HqStoreDashboardResponse> storeWiseDashboard() {
+        return hqOperationsService.getStoreWiseDashboard();
+    }
+
+    @GetMapping("/dashboard/customer-wise")
+    public List<HqCustomerDashboardResponse> customerWiseDashboard() {
+        return hqOperationsService.getCustomerWiseDashboard();
     }
 }

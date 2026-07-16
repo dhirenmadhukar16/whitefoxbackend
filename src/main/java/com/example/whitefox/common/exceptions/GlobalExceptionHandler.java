@@ -72,6 +72,19 @@ public class GlobalExceptionHandler {
                 );
     }
 
+    @ExceptionHandler(org.springframework.security.authentication.BadCredentialsException.class)
+    public ResponseEntity<ApiResponse<?>> handleBadCredentialsException(
+            org.springframework.security.authentication.BadCredentialsException ex
+    ) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(
+                        ApiResponse.builder()
+                                .success(false)
+                                .message("Invalid email or password")
+                                .build()
+                );
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<?>> handleException(
             Exception ex
@@ -83,7 +96,7 @@ public class GlobalExceptionHandler {
                 .body(
                         ApiResponse.builder()
                                 .success(false)
-                                .message("Something went wrong")
+                                .message("Something went wrong: " + ex.toString())
                                 .build()
                 );
     }
