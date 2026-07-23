@@ -20,7 +20,9 @@ public class CorsConfig {
 
         config.setAllowedOriginPatterns(List.of(
                 "http://localhost:*",
-                "http://127.0.0.1:*"
+                "http://127.0.0.1:*",
+                "https://*.onrender.com",
+                "*"
         ));
 
         config.setAllowedMethods(List.of(

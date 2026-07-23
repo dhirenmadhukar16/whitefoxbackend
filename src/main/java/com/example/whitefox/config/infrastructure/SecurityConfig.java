@@ -28,10 +28,8 @@ public class SecurityConfig {
     ) throws Exception {
 
 
-//                .csrf(csrf -> csrf.disable())
-//                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 http
-    .cors(cors -> {})
+                .cors(org.springframework.security.config.Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
 
@@ -102,3 +100,4 @@ public class SecurityConfig {
 
 
 }
+
