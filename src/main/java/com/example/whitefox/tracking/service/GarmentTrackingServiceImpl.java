@@ -498,7 +498,7 @@ public class GarmentTrackingServiceImpl implements GarmentTrackingService {
 
         List<GarmentResponse> responses = new ArrayList<>();
         for (Garment garment : dropped) {
-            String deliveryType = garment.getOrder().getDeliveryType();
+            String deliveryType = garment.getOrder().getDeliveryType() != null ? garment.getOrder().getDeliveryType().name() : "";
             GarmentStatus newStatus = GarmentStatus.READY_FOR_DELIVERY;
             if ("SELF_PICKUP".equalsIgnoreCase(deliveryType)) {
                 newStatus = GarmentStatus.READY_FOR_CUSTOMER_PICKUP;
@@ -612,8 +612,7 @@ public class GarmentTrackingServiceImpl implements GarmentTrackingService {
             GarmentStatus.READY_FOR_DELIVERY,
             GarmentStatus.OUT_FOR_DELIVERY,
             GarmentStatus.DELIVERED,
-            GarmentStatus.READY_FOR_CUSTOMER_PICKUP,
-            GarmentStatus.PICKED_UP_BY_CUSTOMER
+            GarmentStatus.READY_FOR_CUSTOMER_PICKUP
         );
         
         List<Garment> allDispatched = garmentRepository.findByStatusIn(statuses);
