@@ -29,7 +29,7 @@ public class SecurityConfig {
 
 
                 http
-                .cors(org.springframework.security.config.Customizer.withDefaults())
+                .cors(cors -> cors.disable())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
 
@@ -100,4 +100,5 @@ public class SecurityConfig {
 
 
 }
+
 
